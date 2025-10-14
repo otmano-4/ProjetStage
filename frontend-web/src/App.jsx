@@ -1,36 +1,67 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Login from "./pages/Login";
 import ProtectedRoute from "./components/ProtectedRoute";
 
 // 🧩 Pages Étudiant
 import ExamensEtudiant from "./pages/etudiant/Examens";
-import DashboardEtudiant from "./pages/etudiant/DashboardEtudiant"; // nouvelle page
+import ExercicesEtudiant from "./pages/etudiant/Exercices";
 
 // 🧩 Pages Professeur
 import ProfExamens from "./pages/professeur/Examens";
 
 // 🧩 Pages Admin
 import AdminUtilisateurs from "./pages/admin/Utilisateurs";
+import "./App.css"
+import Dashboard from "./components/Pages/Dashboard";
 
 function App() {
   const user = JSON.parse(localStorage.getItem("utilisateur"));
 
+
+  const etudiantPages = [ 
+    {
+      "title": "Dashboard",
+      "link": "/etudiant/dashboard"
+    },
+    {
+      "title": "Exams",
+      "link": "/etudiant/exams"
+    },
+    {
+      "title": "Exercices",
+      "link": "/etudiant/exercices"
+    },
+  ]
+  
+  const profPages = [ 
+    {
+      "title": "Dashboard",
+      "link": "/"
+    },
+    {
+      "title": "Exams",
+      "link": "/exams"
+    },
+  ]
+
   return (
-    <Router>
+    <BrowserRouter>
       <Routes>
         {/* --- Page de connexion --- */}
         <Route path="/login" element={<Login />} />
 
         {/* ================= ÉTUDIANT ================= */}
-        <Route element={<ProtectedRoute allowedRoles={["ETUDIANT"]} />}>
-          <Route path="/etudiant/dashboard" element={<DashboardEtudiant />} />
-          <Route path="/etudiant/examens" element={<ExamensEtudiant />} />
-        </Route>
+        {/* <Route element={<ProtectedRoute allowedRoles={["ETUDIANT"]} />}> */}
+          <Route path="/etudiant/dashboard" element={<Dashboard pages={etudiantPages} />} />
+          <Route path="/etudiant/exams" element={<ExamensEtudiant pages={etudiantPages} />} />
+          <Route path="/etudiant/exercices" element={<ExercicesEtudiant pages={etudiantPages} />} />
+        {/* </Route> */}
 
         {/* ================= PROFESSEUR ================= */}
-        <Route element={<ProtectedRoute allowedRoles={["PROFESSEUR"]} />}>
+        {/* <Route element={<ProtectedRoute allowedRoles={["PROFESSEUR"]} />}> */}
+          <Route path="/professeur/dashboard" element={<Dashboard pages={profPages}  />} />
           <Route path="/professeur/examens" element={<ProfExamens />} />
-        </Route>
+        {/* </Route> */}
 
         {/* ================= ADMIN ================= */}
         <Route element={<ProtectedRoute allowedRoles={["ADMIN"]} />}>
@@ -59,7 +90,7 @@ function App() {
         {/* --- Route par défaut --- */}
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
-    </Router>
+    </BrowserRouter>
   );
 }
 

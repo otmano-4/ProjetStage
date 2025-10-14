@@ -4,22 +4,22 @@ import axios from "axios";
 import { Book, Calendar, Award, MessageCircle, Menu } from "lucide-react";
 import { Link } from "react-router-dom";
 
-export default function Examens({pages}) {
-  const [examens, setExamens] = useState([]);
+export default function Exercices({pages}) {
+  const [exercices, setexercices] = useState([]);
   const [error, setError] = useState("");
 
   const [menuOpen, setMenuOpen] = useState(false);
   const utilisateur = {}
 
   useEffect(() => {
-    axios.get("http://localhost:8080/api/examens/classe/1")
+    axios.get("http://localhost:8080/api/exercices/classe/1")
       .then(res => {
-        console.log("✅ Examens reçus :", res.data);
-        setExamens(res.data);
+        console.log("✅ exercices reçus :", res.data);
+        setexercices(res.data);
       })
       .catch(err => {
         console.error("❌ Erreur :", err);
-        setError("Impossible de charger les examens");
+        setError("Impossible de charger les exercices");
       });
   }, []);
 
@@ -80,23 +80,12 @@ export default function Examens({pages}) {
 
         <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
         <div className="p-6">
-          <h1 className="text-2xl font-bold mb-4">📘 Examens de la classe</h1>
+          <h1 className="text-2xl font-bold mb-4">📘 Exercice de la classe</h1>
 
           {error && <p className="text-red-500">{error}</p>}
 
           <ul>
-            {examens.map(e => (
-              <li key={e.id} className="border p-3 rounded mb-2">
-                <h2 className="text-lg font-semibold">{e.titre}</h2>
-                <p>{e.description}</p>
-                <p>⏱ Durée : {e.duree} min</p>
-              </li>
-            ))}
-              <li className="border p-3 rounded-lg mb-2 bg-blue-600 hover:scale-105 text-white shadow-md transition-all px-8 py-5 hover:shadow-2xl">
-                <h2 className="text-lg font-semibold"> Titre</h2>
-                <p> Lorem ipsum dolor sit, amet consectetur adipisicing elit. Temporibus aut nobis iusto vitae dolores fuga vero quia voluptates sit exercitationem, quasi officia animi ratione blanditiis eveniet praesentium, similique porro quos.</p>
-                <p className="mt-4 font-medium text-lg">⏱ Durée : 30min min</p>
-              </li>
+            
           </ul>
         </div>
         </main>
@@ -105,19 +94,3 @@ export default function Examens({pages}) {
   );
 }
 
-
-{/* <div className="p-6">
-      <h1 className="text-2xl font-bold mb-4">📘 Examens de la classe</h1>
-
-      {error && <p className="text-red-500">{error}</p>}
-
-      <ul>
-        {examens.map(e => (
-          <li key={e.id} className="border p-3 rounded mb-2">
-            <h2 className="text-lg font-semibold">{e.titre}</h2>
-            <p>{e.description}</p>
-            <p>⏱ Durée : {e.duree} min</p>
-          </li>
-        ))}
-      </ul>
-    </div> */}
