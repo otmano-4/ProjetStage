@@ -7,4 +7,6 @@ import java.util.List;
 public interface ExamenRepository extends JpaRepository<Examen, Long> {
     // 🔹 Custom query method pour récupérer les examens d'une classe
     List<Examen> findByClasseId(Long classeId);
+
+    List<Examen> findByAfficherTrue();
 }

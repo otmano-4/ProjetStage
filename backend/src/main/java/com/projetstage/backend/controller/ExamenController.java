@@ -26,6 +26,16 @@ public class ExamenController {
                 .toList();
     }
 
+    // ✅ Lister tous les examens à afficher
+    @GetMapping("/afficher")
+    public List<ExamenDTO> getAfficherExams() {
+        return examenRepository.findByAfficherTrue()
+                .stream()
+                .map(ExamenDTO::new)
+                .toList();
+    }
+
+
     // ✅ Lister les examens d'une classe
     @GetMapping("/classe/{classeId}")
     public List<ExamenDTO> getByClasse(@PathVariable Long classeId) {

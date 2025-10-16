@@ -64,10 +64,41 @@ public class UtilisateurController {
                 .orElseThrow(() -> new RuntimeException("Utilisateur non trouvé"));
         return new UtilisateurDTO(updated);
     }
+    
+    @PutMapping("/update-password")
+    public UtilisateurDTO updatePassword(@RequestBody NewPassword newPassword) {
+        Utilisateur updated = utilisateurRepository.findById(newPassword.getId())
+                .map(u -> {
+                    u.setMotDePasse(newPassword.getNewpassword());
+                    return utilisateurRepository.save(u);
+                })
+                .orElseThrow(() -> new RuntimeException("Utilisateur non trouvé"));
+
+        return new UtilisateurDTO(updated);
+    }
+
+
 
     // ✅ Supprimer un utilisateur
     @DeleteMapping("/{id}")
     public void delete(@PathVariable Long id) {
         utilisateurRepository.deleteById(id);
+    }
+}
+
+
+class NewPassword {
+    Long id;
+    String newpassword;
+
+    public NewPassword() {
+    }
+
+    public Long getId() {
+        return id;
+    }
+
+    public String getNewpassword() {
+        return newpassword;
     }
 }

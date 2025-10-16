@@ -8,6 +8,7 @@ public class ExamenDTO {
     private String titre;
     private String description;
     private int duree;
+    private boolean afficher;
     private LocalDateTime datePublication;
     private String professeurNom;
 
@@ -17,6 +18,7 @@ public class ExamenDTO {
         this.titre = examen.getTitre();
         this.description = examen.getDescription();
         this.duree = examen.getDuree();
+        this.afficher = examen.isAfficher();
         this.datePublication = examen.getDatePublication();
         this.professeurNom = examen.getProfesseur().getNom();
     }
@@ -28,4 +30,5 @@ public class ExamenDTO {
     public int getDuree() { return duree; }
     public LocalDateTime getDatePublication() { return datePublication; }
     public String getProfesseurNom() { return professeurNom; }
+    public boolean  isAfficher() { return afficher; }
 }
