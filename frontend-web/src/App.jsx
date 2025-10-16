@@ -2,6 +2,10 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Login from "./pages/Login";
 import ProtectedRoute from "./components/ProtectedRoute";
 
+
+import Dashboard from "./components/Pages/Dashboard";
+
+
 // 🧩 Pages Étudiant
 import ExamensEtudiant from "./pages/etudiant/Examens";
 import ExercicesEtudiant from "./pages/etudiant/Exercices";
@@ -12,7 +16,6 @@ import ProfExamens from "./pages/professeur/Examens";
 // 🧩 Pages Admin
 import AdminUtilisateurs from "./pages/admin/Utilisateurs";
 import "./App.css"
-import Dashboard from "./components/Pages/Dashboard";
 
 function App() {
   const user = JSON.parse(localStorage.getItem("utilisateur"));

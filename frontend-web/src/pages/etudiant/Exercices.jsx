@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 
-import { Book, Calendar, Award, MessageCircle, Menu } from "lucide-react";
 import { Link } from "react-router-dom";
 
 export default function Exercices({pages}) {
@@ -53,7 +52,6 @@ export default function Exercices({pages}) {
         <div className="md:hidden flex items-center justify-between bg-white px-4 py-3 shadow">
           <h1 className="text-xl font-bold text-blue-700">E-Exam</h1>
           <button onClick={() => setMenuOpen(!menuOpen)} className="p-2 rounded hover:bg-gray-100">
-            <Menu size={22} />
           </button>
         </div>
 
