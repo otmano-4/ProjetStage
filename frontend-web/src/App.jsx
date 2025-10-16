@@ -13,6 +13,7 @@ import ProfExamens from "./pages/professeur/Examens";
 import AdminUtilisateurs from "./pages/admin/Utilisateurs";
 import "./App.css"
 import Dashboard from "./components/Pages/Dashboard";
+import Profile from "./components/Pages/Profile";
 
 function App() {
   const user = JSON.parse(localStorage.getItem("utilisateur"));
@@ -51,17 +52,17 @@ function App() {
         <Route path="/login" element={<Login />} />
 
         {/* ================= ÉTUDIANT ================= */}
-        {/* <Route element={<ProtectedRoute allowedRoles={["ETUDIANT"]} />}> */}
+        <Route element={<ProtectedRoute allowedRoles={["ETUDIANT"]} />}>
           <Route path="/etudiant/dashboard" element={<Dashboard pages={etudiantPages} />} />
           <Route path="/etudiant/exams" element={<ExamensEtudiant pages={etudiantPages} />} />
           <Route path="/etudiant/exercices" element={<ExercicesEtudiant pages={etudiantPages} />} />
-        {/* </Route> */}
+        </Route>
 
         {/* ================= PROFESSEUR ================= */}
-        {/* <Route element={<ProtectedRoute allowedRoles={["PROFESSEUR"]} />}> */}
+        <Route element={<ProtectedRoute allowedRoles={["PROFESSEUR"]} />}>
           <Route path="/professeur/dashboard" element={<Dashboard pages={profPages}  />} />
           <Route path="/professeur/examens" element={<ProfExamens />} />
-        {/* </Route> */}
+        </Route>
 
         {/* ================= ADMIN ================= */}
         <Route element={<ProtectedRoute allowedRoles={["ADMIN"]} />}>
@@ -69,6 +70,12 @@ function App() {
           {/* 🔜 plus tard : <Route path="/admin/dashboard" ... /> */}
         </Route>
 
+
+        <Route path="/profile" element={<Profile pages={etudiantPages} />} />
+        
+        
+        
+        
         {/* --- Redirection automatique selon rôle --- */}
         <Route
           path="/"
