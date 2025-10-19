@@ -7,17 +7,25 @@ import Dashboard from "./components/Pages/Dashboard";
 
 
 // 🧩 Pages Étudiant
-import ExamensEtudiant from "./pages/etudiant/Examens";
-import ExercicesEtudiant from "./pages/etudiant/Exercices";
+import ExamensEtudiant from "./pages/etudiant/Examen/Examens";
+import ExercicesEtudiant from "./pages/etudiant/Exercices/Exercices";
 
 // 🧩 Pages Professeur
-import ProfExamens from "./pages/professeur/Examens";
+import ProfExamens from "./pages/professeur/Examens/Examens";
 
 // 🧩 Pages Admin
 import AdminUtilisateurs from "./pages/admin/Utilisateurs";
 import "./App.css"
-import Dashboard from "./components/Pages/Dashboard";
 import Profile from "./components/Pages/Profile";
+
+
+import { useDispatch, useSelector } from 'react-redux'
+
+
+import {BookText, LayoutDashboard, Newspaper} from 'lucide-react'
+import { useEffect } from "react";
+import { fetchExamens } from "./store/slices/examSlice";
+
 
 function App() {
   const user = JSON.parse(localStorage.getItem("utilisateur"));
@@ -26,52 +34,64 @@ function App() {
   const etudiantPages = [ 
     {
       "title": "Dashboard",
-      "link": "/etudiant/dashboard"
+      "link": "/etudiant/dashboard",
+      "icon": <LayoutDashboard />
     },
     {
       "title": "Exams",
-      "link": "/etudiant/exams"
+      "link": "/etudiant/exams",
+      "icon": <Newspaper />
     },
     {
       "title": "Exercices",
-      "link": "/etudiant/exercices"
+      "link": "/etudiant/exercices",
+      "icon": <BookText />
     },
   ]
   
   const profPages = [ 
     {
       "title": "Dashboard",
-      "link": "/"
+      "link": "/professeur/dashboard",
+      "icon": <LayoutDashboard />
     },
     {
       "title": "Exams",
-      "link": "/exams"
+      "link": "/professeur/exams",
+      "icon": <Newspaper />
     },
   ]
+
+
+
+  const dispatch = useDispatch()
+  
+
+  useEffect(() => {
+    dispatch(fetchExamens());
+  }, [dispatch]);
+
+  
+
 
   return (
     <BrowserRouter>
       <Routes>
-        {/* --- Page de connexion --- */}
         <Route path="/login" element={<Login />} />
 
-        {/* ================= ÉTUDIANT ================= */}
         <Route element={<ProtectedRoute allowedRoles={["ETUDIANT"]} />}>
           <Route path="/etudiant/dashboard" element={<Dashboard pages={etudiantPages} />} />
           <Route path="/etudiant/exams" element={<ExamensEtudiant pages={etudiantPages} />} />
           <Route path="/etudiant/exercices" element={<ExercicesEtudiant pages={etudiantPages} />} />
         </Route>
 
-        {/* ================= PROFESSEUR ================= */}
         <Route element={<ProtectedRoute allowedRoles={["PROFESSEUR"]} />}>
           <Route path="/professeur/dashboard" element={<Dashboard pages={profPages}  />} />
-          <Route path="/professeur/examens" element={<ProfExamens />} />
+          <Route path="/professeur/exams" element={<ProfExamens pages={profPages} />} />
         </Route>
 
-        {/* ================= ADMIN ================= */}
         <Route element={<ProtectedRoute allowedRoles={["ADMIN"]} />}>
           <Route path="/admin/utilisateurs" element={<AdminUtilisateurs />} />
-          {/* 🔜 plus tard : <Route path="/admin/dashboard" ... /> */}
         </Route>
 
 
@@ -80,7 +100,6 @@ function App() {
         
         
         
-        {/* --- Redirection automatique selon rôle --- */}
         <Route
           path="/"
           element={
@@ -88,9 +107,9 @@ function App() {
               user.role === "ETUDIANT" ? (
                 <Navigate to="/etudiant/dashboard" replace />
               ) : user.role === "PROFESSEUR" ? (
-                <Navigate to="/professeur/examens" replace />
+                <Navigate to="/professeur/dashboard" replace />
               ) : (
-                <Navigate to="/admin/utilisateurs" replace />
+                <Navigate to="/admin/dashboard" replace />
               )
             ) : (
               <Navigate to="/login" replace />

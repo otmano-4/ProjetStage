@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { Link } from 'react-router-dom';
+import { Link, NavLink } from 'react-router-dom';
 
 function Aside({pages}) {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -11,15 +11,21 @@ function Aside({pages}) {
         }`}
       >
         <div className="font-bold text-3xl text-blue-600 mb-6 text-center pt-5">🎓 E-Exam</div>
-        
-        {pages?.map((item,key)=> (
-            <Link
-                to={item.link}
-                key={key}
-                className="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-50 text-gray-700 font-medium"
-            >
-                {item.title}
-            </Link>
+        {pages?.map((item, key) => (
+          <NavLink
+            to={item.link}
+            key={key}
+            className={({ isActive }) =>
+              `flex items-center gap-3 px-4 py-2 rounded-lg font-medium transition-colors ${
+                isActive
+                  ? 'bg-blue-100 text-blue-600'
+                  : 'text-gray-700 hover:bg-blue-50'
+              }`
+            }
+          >
+            {item.icon}
+            <span>{item.title}</span>
+          </NavLink>
         ))}
     </aside>
 

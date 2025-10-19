@@ -2,7 +2,6 @@ package com.projetstage.backend.model;
 
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
-import java.util.List;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 @Entity
@@ -34,17 +33,12 @@ public class Examen {
     @JsonIgnoreProperties({"etudiants"})
     private Classe classe;
 
-    @OneToMany(mappedBy = "examen", cascade = CascadeType.ALL, orphanRemoval = true)
-    @JsonIgnoreProperties("examen")
-    private List<Question> questions;
-
     // --- Constructors ---
     public Examen() {}
 
-    public Examen(Long id, String titre, String description, int duree, boolean afficher,
+    public Examen(String titre, String description, int duree, boolean afficher,
                   LocalDateTime datePublication, Utilisateur professeur,
-                  Classe classe, List<Question> questions) {
-        this.id = id;
+                  Classe classe) {
         this.titre = titre;
         this.description = description;
         this.duree = duree;
@@ -52,7 +46,6 @@ public class Examen {
         this.datePublication = datePublication;
         this.professeur = professeur;
         this.classe = classe;
-        this.questions = questions;
     }
 
     // --- Getters ---
@@ -88,9 +81,6 @@ public class Examen {
         return classe;
     }
 
-    public List<Question> getQuestions() {
-        return questions;
-    }
 
     // --- Setters ---
     public void setId(Long id) {
@@ -125,7 +115,4 @@ public class Examen {
         this.classe = classe;
     }
 
-    public void setQuestions(List<Question> questions) {
-        this.questions = questions;
-    }
 }
