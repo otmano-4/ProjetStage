@@ -31,10 +31,10 @@ export default function Login() {
           navigate("/etudiant/dashboard");
           break;
         case "PROFESSEUR":
-          navigate("/professeur/examens");
+          navigate("/professeur/dashboard");
           break;
         case "ADMIN":
-          navigate("/admin/utilisateurs");
+          navigate("/admin/dashboard");
           break;
 
           navigate("/");

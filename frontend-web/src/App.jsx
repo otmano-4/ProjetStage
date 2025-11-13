@@ -25,6 +25,7 @@ import { useDispatch, useSelector } from 'react-redux'
 import {BookText, LayoutDashboard, Newspaper} from 'lucide-react'
 import { useEffect } from "react";
 import { fetchExamens } from "./store/slices/examSlice";
+import Classe from "./pages/professeur/Classes/Classe";
 
 
 function App() {
@@ -60,6 +61,11 @@ function App() {
       "link": "/professeur/exams",
       "icon": <Newspaper />
     },
+     {
+      "title": "Classe",
+      "link": "/professeur/classe",
+      "icon": <Newspaper />
+    },
   ]
 
 
@@ -88,6 +94,8 @@ function App() {
         <Route element={<ProtectedRoute allowedRoles={["PROFESSEUR"]} />}>
           <Route path="/professeur/dashboard" element={<Dashboard pages={profPages}  />} />
           <Route path="/professeur/exams" element={<ProfExamens pages={profPages} />} />
+          <Route path="/professeur/classe" element={<Classe pages={profPages}  />} />
+
         </Route>
 
         <Route element={<ProtectedRoute allowedRoles={["ADMIN"]} />}>
