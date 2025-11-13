@@ -1,7 +1,7 @@
 import React, { useState } from "react"
 import { X } from "lucide-react"
 import { useDispatch } from "react-redux"
-import { createMatiereFun, fetchMatieres } from "../../../store/slices/matiereSlice" // adapte selon ton projet
+import { createMatiereFun, fetchMatieres } from "../../../store/slices/matiereSlice"
 
 function CreateMatiere({ setShowModal, professeurs, onAdd }) {
   const dispatch = useDispatch()

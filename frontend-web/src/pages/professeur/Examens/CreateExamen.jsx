@@ -11,8 +11,8 @@ function CreateExamen({setShowModal}) {
         titre: "ff",
         description: "gg",
         duree: 10,
-        classeId: 5,
-        professeurId: 6, // assign from logged-in user
+        classeId: 1,
+        professeurId: 2, // assign from logged-in user
         afficher: 1,       // 1 = true, 0 = false
         date_publication: new Date().toISOString().slice(0, 19).replace("T", " ") // current datetime in MySQL format
     });
