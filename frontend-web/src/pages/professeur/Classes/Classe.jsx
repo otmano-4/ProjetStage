@@ -1,244 +1,112 @@
-import React, { useState } from "react"
-import {
-  BookOpen,
-  Users,
-  GraduationCap,
-  User,
-  PlusCircle,
-} from "lucide-react"
-import Aside from "../../../components/Layouts/Aside"
-import Header from "../../../components/Layouts/Header"
-import CreateProfesseur from "./CreateProfesseur"
-import CreateMatiere from "./CreateMatiere"
+import React, { useState, useEffect } from "react";
+import { PlusCircle, Users, GraduationCap, BookOpen } from "lucide-react";
+import { Link } from "react-router-dom"; // ✅ FIXED IMPORT
+import Aside from "../../../components/Layouts/Aside";
+import Header from "../../../components/Layouts/Header";
+import CreateClasse from "./CreateClasse";
+import { useSelector } from "react-redux";
+import { motion } from "framer-motion";
 
 function Classe({ pages }) {
-  // === Données locales simulées (à connecter à Redux ou API ensuite) ===
-  const [professeurs, setProfesseurs] = useState([
-    {
-      id: 1,
-      nom: "M. Dupont",
-      matieres: [
-        {
-          id: 1,
-          nom: "Mathématiques",
-          classes: [
-            {
-              id: 1,
-              nom: "6ème A",
-              etudiants: ["Alice", "Benoît", "Camille"],
-            },
-          ],
-        },
-      ],
-    },
-  ])
+  const { data: classes, loading } = useSelector((state) => state.classes);
 
-  const [matieres, setMatieres] = useState([
-    { id: 1, nom: "Mathématiques", description: "Cours de logique et calcul" },
-  ])
+  const [showClassModal, setShowClassModal] = useState(false);
 
-  const [classes] = useState([
-    { id: 1, nom: "6ème A" },
-    { id: 2, nom: "5ème B" },
-    { id: 3, nom: "4ème A" },
-  ])
-
-  // === États des modales ===
-  const [showProfModal, setShowProfModal] = useState(false)
-  const [showMatiereModal, setShowMatiereModal] = useState(false)
-
-  // === Ajouter un professeur ===
-  const handleAddProf = (newProf) => {
-    const profData = {
-      id: Date.now(),
-      nom: newProf.nom,
-      matieres: [
-        {
-          id: Date.now() + 1,
-          nom: newProf.matiere,
-          classes: [
-            {
-              id: parseInt(newProf.classe_id),
-              nom: classes.find(
-                (c) => c.id === parseInt(newProf.classe_id)
-              )?.nom,
-              etudiants: [],
-            },
-          ],
-        },
-      ],
-    }
-
-    setProfesseurs((prev) => [...prev, profData])
-    setShowProfModal(false)
-  }
-
-  // === Ajouter une matière ===
-  const handleAddMatiere = (newMatiere) => {
-    const matiereData = {
-      id: Date.now(),
-      nom: newMatiere.nom,
-      description: newMatiere.description,
-      professeur_id: parseInt(newMatiere.professeur_id),
-      professeur_nom:
-        professeurs.find(
-          (p) => p.id === parseInt(newMatiere.professeur_id)
-        )?.nom || "Inconnu",
-    }
-
-    setMatieres((prev) => [...prev, matiereData])
-    setShowMatiereModal(false)
-  }
 
   return (
-    <div className="flex min-h-screen bg-gray-100">
+    <div className="flex min-h-screen bg-gray-50">
+      {/* === Sidebar === */}
       <Aside pages={pages} />
-      <div className="flex flex-col flex-1 w-full min-h-screen">
+
+      {/* === Main content === */}
+      <div className="flex flex-col flex-1">
         <Header />
 
-        <main className="flex-1 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
-          {/* === En-tête === */}
-          <div className="flex justify-between items-center mb-8">
-            <h1 className="text-3xl font-bold text-gray-800">
-              📚 Gestion des Classes, Professeurs et Matières
-            </h1>
-
-            <div className="flex gap-3">
-              <button
-                onClick={() => setShowProfModal(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition"
-              >
-                <PlusCircle className="w-5 h-5" /> Ajouter un professeur
-              </button>
-
-              <button
-                onClick={() => setShowMatiereModal(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition"
-              >
-                <PlusCircle className="w-5 h-5" /> Ajouter une matière
-              </button>
+        <main className="flex-1 sm:px-6 lg:px-20 py-10">
+          {/* === Header section === */}
+          <div className="flex justify-between items-center mb-10">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-800">
+                📚 Gestion des Classes
+              </h1>
+              <p className="text-gray-500 mt-1">
+                Gérez les classes, professeurs et matières de votre
+                établissement.
+              </p>
             </div>
+
+            <motion.button
+              onClick={() => setShowClassModal(true)}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-sm transition-all font-medium"
+            >
+              <PlusCircle className="w-5 h-5" />
+              Nouvelle Classe
+            </motion.button>
           </div>
 
-          {/* === Modales === */}
-          {showProfModal && (
-            <CreateProfesseur
-              setShowModal={setShowProfModal}
-              classes={classes}
-              onAdd={handleAddProf}
-            />
-          )}
-
-          {showMatiereModal && (
-            <CreateMatiere
-              setShowModal={setShowMatiereModal}
-              professeurs={professeurs}
-              onAdd={handleAddMatiere}
-            />
-          )}
-
-          {/* === Liste des Professeurs === */}
-          <section className="mt-8">
-            <h2 className="text-2xl font-semibold text-gray-700 mb-4">
-              👨‍🏫 Professeurs
-            </h2>
-
-            {professeurs.length === 0 ? (
-              <p className="text-gray-500 italic">
-                Aucun professeur pour le moment.
+          {/* === Classes grid === */}
+          {loading ? (
+            <div className="flex justify-center items-center py-20">
+              <div className="animate-spin h-8 w-8 border-4 border-blue-400 border-t-transparent rounded-full"></div>
+            </div>
+          ) : classes?.length === 0 ? (
+            <div className="text-center py-20 text-gray-500">
+              <GraduationCap className="w-10 h-10 mx-auto mb-3 text-gray-400" />
+              <p>Aucune classe enregistrée pour le moment.</p>
+              <p className="text-sm mt-1">
+                Cliquez sur{" "}
+                <span className="font-semibold">“Nouvelle Classe”</span> pour en
+                ajouter une.
               </p>
-            ) : (
-              professeurs.map((prof) => (
-                <div
-                  key={prof.id}
-                  className="mb-6 bg-white rounded-2xl shadow p-5 hover:shadow-md transition"
+            </div>
+          ) : (
+            <motion.section
+              layout
+              className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3"
+            >
+              {classes.map((classe, index) => (
+                <motion.div
+                  key={classe.id || index}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.05 }}
                 >
-                  <h3 className="text-xl font-semibold text-blue-700 flex items-center gap-2">
-                    <GraduationCap className="w-5 h-5" />
-                    {prof.nom}
-                  </h3>
-
-                  {prof.matieres.map((matiere) => (
-                    <div
-                      key={matiere.id}
-                      className="mt-4 bg-blue-50 rounded-xl p-4 border border-blue-100"
-                    >
-                      <h4 className="text-lg font-medium text-blue-800 flex items-center gap-2">
-                        <BookOpen className="w-5 h-5" /> {matiere.nom}
-                      </h4>
-
-                      {matiere.classes.map((classe) => (
-                        <div
-                          key={classe.id}
-                          className="mt-3 bg-white border rounded-lg p-4"
-                        >
-                          <div className="flex items-center gap-2 text-gray-800 font-medium">
-                            <Users className="w-4 h-4 text-blue-600" />
-                            {classe.nom}
-                          </div>
-
-                          <ul className="mt-2 ml-6 list-disc text-gray-600 space-y-1">
-                            {classe.etudiants.length > 0 ? (
-                              classe.etudiants.map((etudiant, idx) => (
-                                <li key={idx} className="flex items-center gap-1">
-                                  <User className="w-4 h-4 text-gray-500" />
-                                  {etudiant}
-                                </li>
-                              ))
-                            ) : (
-                              <li className="italic text-gray-400">
-                                Aucun étudiant pour le moment
-                              </li>
-                            )}
-                          </ul>
-                        </div>
-                      ))}
-                    </div>
-                  ))}
-                </div>
-              ))
-            )}
-          </section>
-
-          {/* === Liste des Matières === */}
-          <section className="mt-12">
-            <h2 className="text-2xl font-semibold text-gray-700 mb-4">
-              📘 Matières
-            </h2>
-
-            {matieres.length === 0 ? (
-              <p className="text-gray-500 italic">
-                Aucune matière enregistrée.
-              </p>
-            ) : (
-              <div className="grid md:grid-cols-2 gap-4">
-                {matieres.map((matiere) => (
-                  <div
-                    key={matiere.id}
-                    className="bg-white rounded-xl shadow p-4 border border-gray-100 hover:shadow-md transition"
+                  <Link
+                    to={`/professeur/classe/${classe.id}`} // 👈 dynamic route
+                    className="block bg-white border border-gray-200 rounded-2xl p-6 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all cursor-pointer"
                   >
-                    <h3 className="text-lg font-semibold text-blue-700 flex items-center gap-2">
-                      <BookOpen className="w-5 h-5" />
-                      {matiere.nom}
-                    </h3>
-                    <p className="text-gray-600 mt-1 text-sm">
-                      {matiere.description || "Pas de description."}
-                    </p>
-                    <p className="text-gray-500 mt-2 text-sm italic">
-                      Professeur :{" "}
+                    <div className="flex justify-between items-center mb-4">
+                      <h2 className="text-lg font-semibold text-gray-800">
+                        {classe.nom}
+                      </h2>
+                      <BookOpen className="w-5 h-5 text-blue-500" />
+                    </div>
+
+                    <p className="text-gray-500 text-sm mb-3">
+                      Année scolaire :{" "}
                       <span className="font-medium text-gray-700">
-                        {matiere.professeur_nom}
+                        {classe.annee}
                       </span>
                     </p>
-                  </div>
-                ))}
-              </div>
-            )}
-          </section>
+
+                    <div className="flex items-center gap-3 text-gray-500 text-sm">
+                      <Users className="w-4 h-4 text-blue-400" />
+                      <span>25 élèves</span>
+                    </div>
+                  </Link>
+                </motion.div>
+              ))}
+            </motion.section>
+          )}
         </main>
       </div>
+
+      {/* === Modal === */}
+      {showClassModal && <CreateClasse setShowModal={setShowClassModal} />}
     </div>
-  )
+  );
 }
 
-export default Classe
+export default Classe;

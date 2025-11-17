@@ -19,13 +19,15 @@ import "./App.css"
 import Profile from "./components/Pages/Profile";
 
 
-import { useDispatch, useSelector } from 'react-redux'
+import { useDispatch } from 'react-redux'
 
 
 import {BookText, LayoutDashboard, Newspaper} from 'lucide-react'
 import { useEffect } from "react";
 import { fetchExamens } from "./store/slices/examSlice";
 import Classe from "./pages/professeur/Classes/Classe";
+import { fetchClasses } from "./store/slices/classSlice";
+import ClasseDetails from "./pages/professeur/Classes/ClasseDetails";
 
 
 function App() {
@@ -75,6 +77,7 @@ function App() {
 
   useEffect(() => {
     dispatch(fetchExamens());
+    dispatch(fetchClasses());
   }, [dispatch]);
 
   
@@ -95,6 +98,7 @@ function App() {
           <Route path="/professeur/dashboard" element={<Dashboard pages={profPages}  />} />
           <Route path="/professeur/exams" element={<ProfExamens pages={profPages} />} />
           <Route path="/professeur/classe" element={<Classe pages={profPages}  />} />
+          <Route path="/professeur/classe/:id" element={<ClasseDetails pages={profPages}  />} />
 
         </Route>
 
