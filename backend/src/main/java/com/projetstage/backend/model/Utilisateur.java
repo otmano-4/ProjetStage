@@ -1,34 +1,62 @@
 package com.projetstage.backend.model;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
+
+import java.util.List;
 
 @Entity
 @Table(name = "utilisateurs")
-@Data @NoArgsConstructor @AllArgsConstructor
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
 public class Utilisateur {
+
+    public void setNom(String nom) {
+        this.nom = nom;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
+    }
+
+    public void setMotDePasse(String motDePasse) {
+        this.motDePasse = motDePasse;
+    }
+
+    public void setRole(Role role) {
+        this.role = role;
+    }
+
+    public Role getRole() {
+        return role;
+    }
+
+    public Long getId() {
+        return id;
+    }
+
+    public String getNom() {
+        return nom;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public enum Role { ADMIN, PROFESSEUR, ETUDIANT }
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     private String nom;
-
-    @Column(unique = true, nullable = false)
     private String email;
-
-    @Column(name = "mot_de_passe", nullable = false)
     private String motDePasse;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private Role role; // ETUDIANT, PROFESSEUR, ADMIN
+    private Role role;
 
-    public enum Role {
-        ETUDIANT,
-        PROFESSEUR,
-        ADMIN
-    }
+    @ManyToMany(mappedBy = "etudiants")
+    private List<Classe> classes;
 }

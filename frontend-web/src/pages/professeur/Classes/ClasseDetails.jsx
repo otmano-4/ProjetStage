@@ -7,7 +7,7 @@ import Aside from "../../../components/Layouts/Aside";
 import { useSelector, useDispatch } from "react-redux";
 import { fetchClasseById } from "../../../store/slices/classSlice"; // You’ll create this action
 // import AddStudentModal from "./AddStudentModal";
-// import ImportStudentsModal from "./ImportStudentsModal";
+import ImportStudentsModal from "./ImportStudentsModal";
 
 function ClasseDetails({ pages }) {
   const { id } = useParams();
@@ -28,9 +28,6 @@ function ClasseDetails({ pages }) {
       </div>
     );
   }
-
-
-  console.log(id);
   
 
   return (
@@ -85,7 +82,7 @@ function ClasseDetails({ pages }) {
               <Users className="w-5 h-5 text-blue-500" /> Liste des élèves
             </h2>
 
-            {selectedClasse.students?.length === 0 ? (
+            {selectedClasse.etudiants?.length === 0 ? (
               <p className="text-gray-500 text-sm">
                 Aucun élève ajouté pour le moment.
               </p>
@@ -101,7 +98,7 @@ function ClasseDetails({ pages }) {
                     </tr>
                   </thead>
                   <tbody>
-                    {/* {selectedClasse.students.map((student, index) => (
+                    {selectedClasse.etudiants.map((student, index) => (
                       <tr
                         key={student.id || index}
                         className="border-b hover:bg-gray-50 transition"
@@ -111,7 +108,7 @@ function ClasseDetails({ pages }) {
                         <td className="px-4 py-2">{student.prenom}</td>
                         <td className="px-4 py-2">{student.email}</td>
                       </tr>
-                    ))} */}
+                    ))}
                   </tbody>
                 </table>
               </div>
@@ -121,7 +118,7 @@ function ClasseDetails({ pages }) {
       </div>
 
       {/* {showAddModal && <AddStudentModal setShowModal={setShowAddModal} />} */}
-      {/* {showImportModal && <ImportStudentsModal setShowModal={setShowImportModal} />} */}
+      {showImportModal && <ImportStudentsModal setShowModal={setShowImportModal} classeId={id} />}
     </div>
   );
 }

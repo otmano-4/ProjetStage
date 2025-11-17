@@ -99,7 +99,6 @@ function App() {
           <Route path="/professeur/exams" element={<ProfExamens pages={profPages} />} />
           <Route path="/professeur/classe" element={<Classe pages={profPages}  />} />
           <Route path="/professeur/classe/:id" element={<ClasseDetails pages={profPages}  />} />
-
         </Route>
 
         <Route element={<ProtectedRoute allowedRoles={["ADMIN"]} />}>

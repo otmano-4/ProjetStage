@@ -3,9 +3,6 @@ package com.projetstage.backend.model;
 import jakarta.persistence.*;
 import lombok.*;
 import java.util.List;
-
-import org.hibernate.annotations.WhereJoinTable;
-
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 @Entity
@@ -28,8 +25,11 @@ public class Classe {
             joinColumns = @JoinColumn(name = "classe_id"),
             inverseJoinColumns = @JoinColumn(name = "utilisateur_id")
     )
-    @WhereJoinTable(clause = "role = 'ETUDIANT'")
-    @JsonIgnoreProperties({"classes", "examens", "reponses", "motDePasse"})
-    private List<Utilisateur> etudiants; // Keep Lombok getter/setter
+    @JsonIgnoreProperties({"classes", "motDePasse"})
+    private List<Utilisateur> etudiants;
+
+    public Long getId() { return id; }
+    public String getNom() { return nom; }
+    public List<Utilisateur> getEtudiants() { return etudiants; }
 
 }

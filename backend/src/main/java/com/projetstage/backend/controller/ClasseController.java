@@ -5,6 +5,7 @@ import com.projetstage.backend.model.Utilisateur;
 import com.projetstage.backend.repository.ClasseRepository;
 import com.projetstage.backend.dto.ClasseDTO;
 
+import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
@@ -16,6 +17,8 @@ import java.util.List;
 import java.util.Optional;
 
 import com.projetstage.backend.repository.UtilisateurRepository;
+
+import jakarta.transaction.Transactional;
 
 @RestController
 @RequestMapping("/api/classes")
@@ -55,7 +58,7 @@ public class ClasseController {
     // ✅ Récupérer une classe par ID avec ses étudiants
     @GetMapping("/{id}")
     public ClasseDTO getById(@PathVariable Long id) {
-        Classe classe = classeRepository.findById(id)
+        Classe classe = classeRepository.findByIdWithEtudiants(id)
                 .orElseThrow(() -> new RuntimeException("Classe non trouvée"));
         return new ClasseDTO(classe);
     }
@@ -78,54 +81,57 @@ public class ClasseController {
         return classeRepository.save(classe);
     }
 
-
+    @Transactional
     @PostMapping("/{classeId}/upload-excel")
-    public Classe uploadStudentsExcel(@PathVariable Long classeId, @RequestParam("file") MultipartFile file) {
-        Classe classe = classeRepository.findById(classeId)
-                .orElseThrow(() -> new RuntimeException("Classe not found"));
+public Classe uploadStudentsExcel(
+        @PathVariable Long classeId,
+        @RequestParam("file") MultipartFile file) {
 
-        try (Workbook workbook = new XSSFWorkbook(file.getInputStream())) {
-            Sheet sheet = workbook.getSheetAt(0);
+    Classe classe = classeRepository.findById(classeId)
+            .orElseThrow(() -> new RuntimeException("Classe not found"));
 
-            for (int i = 1; i <= sheet.getLastRowNum(); i++) {  // Skip header row
-                Row row = sheet.getRow(i);
-                if (row == null) continue;
+    try (Workbook workbook = new XSSFWorkbook(file.getInputStream())) {
+        Sheet sheet = workbook.getSheetAt(0);
 
-                String nom = row.getCell(0).getStringCellValue();
-                String email = row.getCell(1).getStringCellValue();
-                String motDePasse = row.getCell(2).getStringCellValue();
+        for (int i = 1; i <= sheet.getLastRowNum(); i++) {
+            Row row = sheet.getRow(i);
+            if (row == null) continue;
 
-                // Find existing student
-                Optional<Utilisateur> existing = utilisateurRepository.findByEmail(email);
+            String email = getCellValue(row.getCell(0));
+            String nom = getCellValue(row.getCell(1));
+            String motDePasse = getCellValue(row.getCell(2));
 
-                Utilisateur etudiant;
+            Utilisateur etudiant = utilisateurRepository.findByEmail(email)
+                    .orElseGet(() -> {
+                        Utilisateur u = new Utilisateur();
+                        u.setNom(nom);
+                        u.setEmail(email);
+                        u.setMotDePasse(motDePasse);
+                        u.setRole(Utilisateur.Role.ETUDIANT);
+                        return utilisateurRepository.save(u);
+                    });
 
-                if (existing.isPresent()) {
-                    etudiant = existing.get();
-                } else {
-                    // Create new student
-                    etudiant = new Utilisateur();
-                    etudiant.setNom(nom);
-                    etudiant.setEmail(email);
-                    etudiant.setMotDePasse(motDePasse);
-                    etudiant.setRole(Utilisateur.Role.ETUDIANT);
-
-                    etudiant = utilisateurRepository.save(etudiant);
-                }
-
-                // Add to class if not already added
-                if (!classe.getEtudiants().contains(etudiant)) {
-                    classe.getEtudiants().add(etudiant);
-                }
+            if (!classe.getEtudiants().contains(etudiant)) {
+                classe.getEtudiants().add(etudiant);
             }
-
-            return classeRepository.save(classe);
-
-        } catch (Exception e) {
-            throw new RuntimeException("Error processing Excel file: " + e.getMessage());
         }
-    }
 
+        return classeRepository.save(classe);
+
+    } catch (Exception e) {
+        throw new RuntimeException("Error processing Excel file: " + e.getMessage());
+    }
+}
+
+private String getCellValue(Cell cell) {
+    if (cell == null) return "";
+    return switch (cell.getCellType()) {
+        case STRING -> cell.getStringCellValue();
+        case NUMERIC -> String.valueOf((long) cell.getNumericCellValue());
+        case BOOLEAN -> String.valueOf(cell.getBooleanCellValue());
+        default -> "";
+    };
+}
 
 
 
