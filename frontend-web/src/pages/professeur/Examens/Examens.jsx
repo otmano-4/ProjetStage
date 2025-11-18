@@ -7,7 +7,7 @@ import CreateExamen from "./CreateExamen";
 
 export default function Examens({ pages }) {
   const { list: examens, loading, error } = useSelector((state) => state.examens);
-
+  const { data :classes }=useSelector((state) => state.classes);
   const [showModal, setShowModal] = useState(false);
   
   
@@ -69,7 +69,7 @@ export default function Examens({ pages }) {
       </div>
 
       {showModal && (
-        <CreateExamen setShowModal={setShowModal} />
+        <CreateExamen setShowModal={setShowModal} classes={classes} />
       )}
     </div>
   );

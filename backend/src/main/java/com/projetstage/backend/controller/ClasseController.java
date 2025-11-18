@@ -4,6 +4,7 @@ import com.projetstage.backend.model.Classe;
 import com.projetstage.backend.model.Utilisateur;
 import com.projetstage.backend.repository.ClasseRepository;
 import com.projetstage.backend.dto.ClasseDTO;
+import com.projetstage.backend.dto.ClasseDTOetudiant;
 
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.Row;
@@ -34,13 +35,13 @@ public class ClasseController {
     }
 
     // ✅ Liste des classes
-    @GetMapping
-    public List<ClasseDTO> getAll() {
-        return classeRepository.findAll()
-                .stream()
-                .map(ClasseDTO::new)
-                .toList();
-    }
+   @GetMapping
+public List<ClasseDTOetudiant> getAll() {
+    return classeRepository.findAll()
+            .stream()
+            .map(ClasseDTOetudiant::new)
+            .toList();
+}
 
     // ✅ Créer une classe
     @PostMapping

@@ -93,7 +93,6 @@ function ClasseDetails({ pages }) {
                     <tr className="bg-gray-100 text-left">
                       <th className="px-4 py-3">#</th>
                       <th className="px-4 py-3">Nom</th>
-                      <th className="px-4 py-3">Prénom</th>
                       <th className="px-4 py-3">Email</th>
                     </tr>
                   </thead>
@@ -105,7 +104,6 @@ function ClasseDetails({ pages }) {
                       >
                         <td className="px-4 py-2">{index + 1}</td>
                         <td className="px-4 py-2">{student.nom}</td>
-                        <td className="px-4 py-2">{student.prenom}</td>
                         <td className="px-4 py-2">{student.email}</td>
                       </tr>
                     ))}
