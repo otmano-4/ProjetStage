@@ -1,19 +1,19 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { X } from "lucide-react";
 import { useDispatch } from "react-redux";
 import { fetchExamens, createExamFun } from "../../../store/slices/examSlice";
 
-function CreateExamen({ setShowModal, user, classes }) {
+function CreateExamen({ setShowModal, classes }) {
   const dispatch = useDispatch();
+  const user = JSON.parse(localStorage.getItem("utilisateur"));
 
   const [newExam, setNewExam] = useState({
     titre: "",
     description: "",
-    duree: "",
-    classeId: "",
+    duree: 0,
+    classeId: 0,
     professeurId: user?.id || null,
-    afficher: 1,
-    date_publication: new Date().toISOString().slice(0, 19).replace("T", " "),
+    afficher: true,
   });
 
   const handleChange = (e) => {
@@ -21,25 +21,29 @@ function CreateExamen({ setShowModal, user, classes }) {
 
     setNewExam((prev) => ({
       ...prev,
-      [name]: type === "checkbox" ? (checked ? 1 : 0) : value,
+      [name]:
+        type === "checkbox"
+          ? checked
+          : name === "classeId" || name === "duree"
+          ? Number(value)
+          : value,
     }));
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    try {
-      dispatch(createExamFun(newExam)).then(() => {
-        dispatch(fetchExamens());
-        setShowModal(false);
-      });
-    } catch (err) {
-      console.error("❌ Erreur lors de la création :", err);
-    }
+
+    console.log(newExam)
+    dispatch(createExamFun(newExam)).then(() => {
+      dispatch(fetchExamens());
+      setShowModal(false);
+    });
   };
 
   return (
     <div className="fixed inset-0 flex items-center justify-center bg-gray-500/50 z-50">
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg p-6 relative animate-fadeIn">
+
         <button
           onClick={() => setShowModal(false)}
           className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
@@ -52,6 +56,7 @@ function CreateExamen({ setShowModal, user, classes }) {
         </h2>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          
           {/* TITRE */}
           <div>
             <label className="block text-gray-700 text-sm mb-1">Title</label>
@@ -79,8 +84,9 @@ function CreateExamen({ setShowModal, user, classes }) {
             />
           </div>
 
-          {/* DUREE & CLASSE */}
+          {/* DUREE + CLASSE */}
           <div className="flex gap-4">
+
             <div className="flex-1">
               <label className="block text-gray-700 text-sm mb-1">Duration (min)</label>
               <input
@@ -102,14 +108,15 @@ function CreateExamen({ setShowModal, user, classes }) {
                 required
                 className="w-full border rounded-lg px-3 py-2"
               >
-                <option value="">Select class</option>
+                <option value={0}>Select class</option>
                 {classes?.map((c) => (
-                  <option key={c.id} value={c.id}>
+                  <option key={c.id} value={Number(c.id)}>
                     {c.nom}
                   </option>
                 ))}
               </select>
             </div>
+
           </div>
 
           {/* VISIBILITÉ */}
@@ -117,7 +124,7 @@ function CreateExamen({ setShowModal, user, classes }) {
             <input
               type="checkbox"
               name="afficher"
-              checked={newExam.afficher === 1}
+              checked={newExam.afficher}
               onChange={handleChange}
               className="w-4 h-4 accent-blue-600"
             />
@@ -135,6 +142,7 @@ function CreateExamen({ setShowModal, user, classes }) {
             >
               Cancel
             </button>
+
             <button
               type="submit"
               className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg"
@@ -142,7 +150,9 @@ function CreateExamen({ setShowModal, user, classes }) {
               Create Exam
             </button>
           </div>
+
         </form>
+
       </div>
     </div>
   );

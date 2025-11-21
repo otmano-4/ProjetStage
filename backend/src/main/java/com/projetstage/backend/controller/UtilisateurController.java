@@ -3,6 +3,7 @@ package com.projetstage.backend.controller;
 import com.projetstage.backend.model.Utilisateur;
 import com.projetstage.backend.repository.UtilisateurRepository;
 import com.projetstage.backend.dto.UtilisateurDTO;
+import com.projetstage.backend.dto.LoginResponse;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
@@ -42,13 +43,27 @@ public class UtilisateurController {
     }
 
     // ✅ Connexion (login)
-    @PostMapping("/login")
-    public UtilisateurDTO login(@RequestBody Utilisateur loginData) {
-        Utilisateur u = utilisateurRepository.findByEmail(loginData.getEmail())
-                .filter(x -> x.getMotDePasse().equals(loginData.getMotDePasse()))
-                .orElseThrow(() -> new RuntimeException("Email ou mot de passe incorrect"));
-        return new UtilisateurDTO(u);
+@PostMapping("/login")
+public LoginResponse login(@RequestBody Utilisateur loginData) {
+
+    Utilisateur u = utilisateurRepository.findByEmail(loginData.getEmail())
+            .filter(x -> x.getMotDePasse().equals(loginData.getMotDePasse()))
+            .orElseThrow(() -> new RuntimeException("Email ou mot de passe incorrect"));
+
+    Long classeId = null;
+
+    if (u.getRole() == Utilisateur.Role.ETUDIANT) {
+        classeId = utilisateurRepository.findClasseIdByEtudiantId(u.getId());
     }
+
+    return new LoginResponse(
+            u.getId(),
+            u.getNom(),
+            u.getEmail(),
+            u.getRole().name(),
+            classeId
+    );
+}
 
     // ✅ Modifier un utilisateur
     @PutMapping("/{id}")

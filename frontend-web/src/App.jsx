@@ -24,7 +24,7 @@ import { useDispatch } from 'react-redux'
 
 import {BookText, LayoutDashboard, Newspaper} from 'lucide-react'
 import { useEffect } from "react";
-import { fetchExamens } from "./store/slices/examSlice";
+import { fetchExamens, fetchExamensByClasse } from "./store/slices/examSlice";
 import Classe from "./pages/professeur/Classes/Classe";
 import { fetchClasses } from "./store/slices/classSlice";
 import ClasseDetails from "./pages/professeur/Classes/ClasseDetails";
@@ -76,9 +76,9 @@ function App() {
   
 
   useEffect(() => {
-    dispatch(fetchExamens());
+    dispatch(fetchExamensByClasse(user?.classeId));
     dispatch(fetchClasses());
-  }, [dispatch]);
+  }, [dispatch,user]);
 
   
 
