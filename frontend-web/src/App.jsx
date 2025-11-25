@@ -142,7 +142,7 @@ function App() {
           </Route>
         </Route>
 
-        <Route path="/profile" element={<Profile pages={user?.role === "ETUDIANT" && etudiantPages || user.role === "PROFESSEUR" && profPages || user.role === "ADMIN" && adminPages} />} />
+        {/* <Route path="/profile" element={<Profile pages={user?.role === "ETUDIANT" && etudiantPages || user.role === "PROFESSEUR" && profPages || user.role === "ADMIN" && adminPages} />} /> */}
         
         <Route
           path="/"
