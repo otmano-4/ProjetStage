@@ -10,9 +10,9 @@ function Aside({pages}) {
 
   return (
     <aside
-        className={`fixed md:static z-30  w-64 bg-white shadow-lg transform transition-transform duration-300 h-screen ${
-          menuOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
-        }`}
+        className={`  z-30  w-64 bg-white shadow-lg transform transition-transform duration-300 sticky left-0 top-0 h-screen 
+          ${menuOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"}
+        `}
       >
         <div className={`${user?.role == "ADMIN" && "text-yellow-400"}  font-bold text-3xl  mb-6 text-center pt-5`}>🎓 E-Exam</div>
         <div className='space-y-2'>

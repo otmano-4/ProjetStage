@@ -40,5 +40,17 @@ public class ClasseDTO {
         public Long getId() { return id; }
         public String getNom() { return nom; }
         public String getEmail() { return email; }
+
+        public void setId(Long id) {
+            this.id = id;
+        }
+
+        public void setNom(String nom) {
+            this.nom = nom;
+        }
+
+        public void setEmail(String email) {
+            this.email = email;
+        }
     }
 }

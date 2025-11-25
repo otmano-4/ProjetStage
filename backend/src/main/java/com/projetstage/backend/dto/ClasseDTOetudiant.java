@@ -3,8 +3,6 @@ package com.projetstage.backend.dto;
 import com.projetstage.backend.model.Classe;
 import com.projetstage.backend.model.Utilisateur;
 
-import java.util.List;
-import java.util.stream.Collectors;
 
 public class ClasseDTOetudiant {
     private Long id;
@@ -18,6 +16,14 @@ public class ClasseDTOetudiant {
 
     public Long getId() { return id; }
     public String getNom() { return nom; }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public void setNom(String nom) {
+        this.nom = nom;
+    }
 
     // Nested DTO for students to avoid exposing password etc.
     public static class EtudiantDTO {
@@ -34,5 +40,60 @@ public class ClasseDTOetudiant {
         public Long getId() { return id; }
         public String getNom() { return nom; }
         public String getEmail() { return email; }
+
+        public void setId(Long id) {
+            this.id = id;
+        }
+
+        public void setEmail(String email) {
+            this.email = email;
+        }
+
+        public void setNom(String nom) {
+            this.nom = nom;
+        }
+    }
+
+
+    public static class CreateStudentDTO {
+
+        private String nom;
+        private String email;
+        private String motDePasse;
+
+        public CreateStudentDTO() {
+            // Default constructor
+        }
+
+        public CreateStudentDTO(String nom, String email, String motDePasse) {
+            this.nom = nom;
+            this.email = email;
+            this.motDePasse = motDePasse;
+        }
+
+        // Getters and Setters
+        public String getNom() {
+            return nom;
+        }
+
+        public void setNom(String nom) {
+            this.nom = nom;
+        }
+
+        public String getEmail() {
+            return email;
+        }
+
+        public void setEmail(String email) {
+            this.email = email;
+        }
+
+        public String getMotDePasse() {
+            return motDePasse;
+        }
+
+        public void setMotDePasse(String motDePasse) {
+            this.motDePasse = motDePasse;
+        }
     }
 }

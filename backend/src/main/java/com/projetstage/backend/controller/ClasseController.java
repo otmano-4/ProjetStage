@@ -11,11 +11,13 @@ import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
-import java.util.Optional;
 
 import com.projetstage.backend.repository.UtilisateurRepository;
 
@@ -36,12 +38,12 @@ public class ClasseController {
 
     // ✅ Liste des classes
    @GetMapping
-public List<ClasseDTOetudiant> getAll() {
-    return classeRepository.findAll()
-            .stream()
-            .map(ClasseDTOetudiant::new)
-            .toList();
-}
+    public List<ClasseDTOetudiant> getAll() {
+        return classeRepository.findAll()
+                .stream()
+                .map(ClasseDTOetudiant::new)
+                .toList();
+    }
 
     // ✅ Créer une classe
     @PostMapping
@@ -84,79 +86,81 @@ public List<ClasseDTOetudiant> getAll() {
 
     @Transactional
     @PostMapping("/{classeId}/upload-excel")
-public Classe uploadStudentsExcel(
-        @PathVariable Long classeId,
-        @RequestParam("file") MultipartFile file) {
+    public Classe uploadStudentsExcel(
+            @PathVariable Long classeId,
+            @RequestParam("file") MultipartFile file) {
 
-    Classe classe = classeRepository.findById(classeId)
-            .orElseThrow(() -> new RuntimeException("Classe not found"));
+        Classe classe = classeRepository.findById(classeId)
+                .orElseThrow(() -> new RuntimeException("Classe not found"));
 
-    try (Workbook workbook = new XSSFWorkbook(file.getInputStream())) {
-        Sheet sheet = workbook.getSheetAt(0);
+        try (Workbook workbook = new XSSFWorkbook(file.getInputStream())) {
+            Sheet sheet = workbook.getSheetAt(0);
 
-        for (int i = 1; i <= sheet.getLastRowNum(); i++) {
-            Row row = sheet.getRow(i);
-            if (row == null) continue;
+            for (int i = 1; i <= sheet.getLastRowNum(); i++) {
+                Row row = sheet.getRow(i);
+                if (row == null) continue;
 
-            String email = getCellValue(row.getCell(0));
-            String nom = getCellValue(row.getCell(1));
-            String motDePasse = getCellValue(row.getCell(2));
+                String email = getCellValue(row.getCell(0));
+                String nom = getCellValue(row.getCell(1));
+                String motDePasse = getCellValue(row.getCell(2));
 
-            Utilisateur etudiant = utilisateurRepository.findByEmail(email)
-                    .orElseGet(() -> {
-                        Utilisateur u = new Utilisateur();
-                        u.setNom(nom);
-                        u.setEmail(email);
-                        u.setMotDePasse(motDePasse);
-                        u.setRole(Utilisateur.Role.ETUDIANT);
-                        return utilisateurRepository.save(u);
-                    });
+                Utilisateur etudiant = utilisateurRepository.findByEmail(email)
+                        .orElseGet(() -> {
+                            Utilisateur u = new Utilisateur();
+                            u.setNom(nom);
+                            u.setEmail(email);
+                            u.setMotDePasse(motDePasse);
+                            u.setRole(Utilisateur.Role.ETUDIANT);
+                            return utilisateurRepository.save(u);
+                        });
 
-            if (!classe.getEtudiants().contains(etudiant)) {
-                classe.getEtudiants().add(etudiant);
+                if (!classe.getEtudiants().contains(etudiant)) {
+                    classe.getEtudiants().add(etudiant);
+                }
             }
+
+            return classeRepository.save(classe);
+
+        } catch (Exception e) {
+            throw new RuntimeException("Error processing Excel file: " + e.getMessage());
+        }
+    }
+
+    private String getCellValue(Cell cell) {
+        if (cell == null) return "";
+        return switch (cell.getCellType()) {
+            case STRING -> cell.getStringCellValue();
+            case NUMERIC -> String.valueOf((long) cell.getNumericCellValue());
+            case BOOLEAN -> String.valueOf(cell.getBooleanCellValue());
+            default -> "";
+        };
+    }
+
+
+
+    @Transactional
+    @PostMapping("/{id}/students")
+    public ResponseEntity<ClasseDTO> addStudent(@PathVariable Long id, @RequestBody ClasseDTOetudiant.CreateStudentDTO dto) {
+        Classe classe = classeRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Classe non trouvée"));
+
+        Utilisateur etudiant = utilisateurRepository.findByEmail(dto.getEmail())
+                .orElseGet(() -> {
+                    Utilisateur u = new Utilisateur();
+                    u.setNom(dto.getNom());
+                    u.setEmail(dto.getEmail());
+                    u.setMotDePasse(dto.getMotDePasse());
+                    u.setRole(Utilisateur.Role.ETUDIANT);
+                    return utilisateurRepository.save(u);
+                });
+
+        if (!classe.getEtudiants().contains(etudiant)) {
+            classe.getEtudiants().add(etudiant);
+            classeRepository.save(classe);
         }
 
-        return classeRepository.save(classe);
-
-    } catch (Exception e) {
-        throw new RuntimeException("Error processing Excel file: " + e.getMessage());
+        return ResponseEntity.ok(new ClasseDTO(classe));
     }
-}
-
-private String getCellValue(Cell cell) {
-    if (cell == null) return "";
-    return switch (cell.getCellType()) {
-        case STRING -> cell.getStringCellValue();
-        case NUMERIC -> String.valueOf((long) cell.getNumericCellValue());
-        case BOOLEAN -> String.valueOf(cell.getBooleanCellValue());
-        default -> "";
-    };
-}
 
 
-
-    // // ✅ Ajouter un étudiant manuellement
-    // @PostMapping("/{id}/students")
-    // public ClasseDTO addStudent(@PathVariable Long id, @RequestBody Student student) {
-    //     Classe classe = classeRepository.findById(id)
-    //             .orElseThrow(() -> new RuntimeException("Classe non trouvée"));
-
-    //     student.setClasse(classe);
-    //     studentRepository.save(student);
-
-    //     return new ClasseDTO(classe);
-    // }
-
-    // // ✅ Ajouter plusieurs étudiants via Excel (JSON array)
-    // @PostMapping("/{id}/students/bulk")
-    // public ClasseDTO addStudentsBulk(@PathVariable Long id, @RequestBody List<Student> students) {
-    //     Classe classe = classeRepository.findById(id)
-    //             .orElseThrow(() -> new RuntimeException("Classe non trouvée"));
-
-    //     students.forEach(student -> student.setClasse(classe));
-    //     studentRepository.saveAll(students);
-
-    //     return new ClasseDTO(classe);
-    // }
 }

@@ -114,7 +114,7 @@ function Utilisateurs({ pages }) {
                       <td className="py-3 px-4">
                         <Link
                           to={`${u.id}`}
-                          className="hover:underline hover:text-yellow-600 font-medium transition"
+                          className="text-yellow-600 hover:text-yellow-800 underline"
                         >
                           {u.nom}
                         </Link>

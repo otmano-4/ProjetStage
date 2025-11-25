@@ -12,6 +12,29 @@ import java.util.List;
 @AllArgsConstructor
 public class Utilisateur {
 
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    private String nom;
+    private String email;
+    private String motDePasse;
+
+    @Enumerated(EnumType.STRING)
+    private Role role;
+
+    public enum Role { ADMIN, PROFESSEUR, ETUDIANT }
+    
+    @ManyToMany(mappedBy = "etudiants")
+    private List<Classe> classes;
+
+
+
+
+
+
+
+
     public void setNom(String nom) {
         this.nom = nom;
     }
@@ -44,19 +67,11 @@ public class Utilisateur {
         return email;
     }
 
-    public enum Role { ADMIN, PROFESSEUR, ETUDIANT }
+    public String getMotDePasse() {
+        return motDePasse;
+    }
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-
-    private String nom;
-    private String email;
-    private String motDePasse;
-
-    @Enumerated(EnumType.STRING)
-    private Role role;
-
-    @ManyToMany(mappedBy = "etudiants")
-    private List<Classe> classes;
+    public List<Classe> getClasses() {
+        return classes;
+    }
 }
