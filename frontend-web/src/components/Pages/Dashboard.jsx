@@ -2,8 +2,11 @@ import React from "react";
 import Aside from "../Layouts/Aside";
 import Header from "../Layouts/Header";
 import { BookOpen, Users, ClipboardList, Calendar } from "lucide-react";
+import { useSelector } from "react-redux";
 
 export default function Dashboard({ pages }) {
+  const user = useSelector((state) => state.auth.user);
+
   const stats = [
     {
       title: "Total Exams",
@@ -28,16 +31,20 @@ export default function Dashboard({ pages }) {
   ];
 
   return (
-    <div className="flex min-h-screen bg-gray-100">
+    <div className="flex min-h-screen bg-gray-100/60">
       <Aside pages={pages} />
 
-      <div className="flex flex-col flex-1 w-full min-h-screen">
+      <div className="flex flex-col flex-1 w-full">
         <Header />
 
         <main className="flex-1 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
           {/* Dashboard Title */}
           <h1 className="text-2xl font-bold text-gray-800 mb-6">
-            Professor Dashboard
+            {user?.role === "ETUDIANT" && "Etudiant "} 
+            {user?.role === "PROFESSEUR" && "Professeur "} 
+            {user?.role === "ADMIN" && "Administrateur "} 
+            
+            Dashboard
           </h1>
 
           {/* Stats Section */}

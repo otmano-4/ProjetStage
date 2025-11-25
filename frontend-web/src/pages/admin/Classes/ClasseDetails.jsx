@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Users, PlusCircle, Upload, ArrowLeft } from "lucide-react";
+import { Users, UserCheck, PlusCircle, Upload, ArrowLeft } from "lucide-react";
 import Header from "../../../components/Layouts/Header";
 import Aside from "../../../components/Layouts/Aside";
 import { useSelector, useDispatch } from "react-redux";
-import { fetchClasseById } from "../../../store/slices/classSlice"; // You’ll create this action
-// import AddStudentModal from "./AddStudentModal";
+import { fetchClasseById } from "../../../store/slices/classSlice";
+import AddStudentModal from "./AddStudentModal";
 import ImportStudentsModal from "./ImportStudentsModal";
 
 function ClasseDetails({ pages }) {
@@ -24,16 +24,14 @@ function ClasseDetails({ pages }) {
   if (loading || !selectedClasse) {
     return (
       <div className="flex justify-center items-center h-screen">
-        <div className="animate-spin h-10 w-10 border-4 border-blue-400 border-t-transparent rounded-full"></div>
+        <div className="animate-spin h-10 w-10 border-4 border-yellow-400 border-t-transparent rounded-full"></div>
       </div>
     );
   }
-  
 
   return (
     <div className="flex min-h-screen bg-gray-50">
       <Aside pages={pages} />
-
       <div className="flex flex-col flex-1">
         <Header />
 
@@ -43,7 +41,7 @@ function ClasseDetails({ pages }) {
             <div>
               <button
                 onClick={() => window.history.back()}
-                className="flex items-center text-blue-600 hover:underline mb-2"
+                className="flex items-center text-yellow-600 hover:underline mb-2"
               >
                 <ArrowLeft className="w-4 h-4 mr-1" /> Retour
               </button>
@@ -60,7 +58,7 @@ function ClasseDetails({ pages }) {
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={() => setShowImportModal(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-xl shadow-sm"
+                className="flex items-center gap-2 px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded-xl shadow-sm"
               >
                 <Upload className="w-5 h-5" /> Importer (.xlsx)
               </motion.button>
@@ -69,23 +67,57 @@ function ClasseDetails({ pages }) {
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={() => setShowAddModal(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-sm"
+                className="flex items-center gap-2 px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded-xl shadow-sm"
               >
                 <PlusCircle className="w-5 h-5" /> Ajouter un élève
               </motion.button>
             </div>
           </div>
 
-          {/* Students List */}
-          <section className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+
+           {/* Professors List */}
+          <section className="bg-white rounded-2xl mb-8 shadow-sm border border-gray-200 p-6">
             <h2 className="text-xl font-semibold mb-4 flex items-center gap-2 text-gray-800">
-              <Users className="w-5 h-5 text-blue-500" /> Liste des élèves
+              <UserCheck className="w-5 h-5 text-blue-500" /> Liste des professeurs
+            </h2>
+
+            {selectedClasse.professeurs?.length === 0 ? (
+              <p className="text-gray-500 text-sm">Aucun professeur assigné pour le moment.</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse text-sm">
+                  <thead>
+                    <tr className="bg-gray-100 text-left">
+                      <th className="px-4 py-3">#</th>
+                      <th className="px-4 py-3">Nom</th>
+                      <th className="px-4 py-3">Email</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {/* {selectedClasse.professeurs.map((prof, index) => (
+                      <tr
+                        key={prof.id || index}
+                        className="border-b hover:bg-gray-50 transition"
+                      >
+                        <td className="px-4 py-2">{index + 1}</td>
+                        <td className="px-4 py-2">{prof.nom}</td>
+                        <td className="px-4 py-2">{prof.email}</td>
+                      </tr>
+                    ))} */}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </section>
+
+          {/* Students List */}
+          <section className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 mb-6">
+            <h2 className="text-xl font-semibold mb-4 flex items-center gap-2 text-gray-800">
+              <Users className="w-5 h-5 text-yellow-500" /> Liste des élèves
             </h2>
 
             {selectedClasse.etudiants?.length === 0 ? (
-              <p className="text-gray-500 text-sm">
-                Aucun élève ajouté pour le moment.
-              </p>
+              <p className="text-gray-500 text-sm">Aucun élève ajouté pour le moment.</p>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full border-collapse text-sm">
@@ -115,7 +147,7 @@ function ClasseDetails({ pages }) {
         </main>
       </div>
 
-      {/* {showAddModal && <AddStudentModal setShowModal={setShowAddModal} />} */}
+      {showAddModal && <AddStudentModal classeId={id} setShowModal={setShowAddModal} />}
       {showImportModal && <ImportStudentsModal setShowModal={setShowImportModal} classeId={id} />}
     </div>
   );

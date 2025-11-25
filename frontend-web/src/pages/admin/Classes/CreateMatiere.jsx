@@ -58,7 +58,7 @@ function CreateMatiere({ setShowModal, professeurs, onAdd }) {
               value={newMatiere.nom}
               onChange={handleChange}
               required
-              className="w-full border rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-blue-400"
+              className="w-full border rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-yellow-400"
               placeholder="Ex : Mathématiques"
             />
           </div>
@@ -72,7 +72,7 @@ function CreateMatiere({ setShowModal, professeurs, onAdd }) {
               value={newMatiere.description}
               onChange={handleChange}
               rows="3"
-              className="w-full border rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-blue-400"
+              className="w-full border rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-yellow-400"
               placeholder="Brève description de la matière"
             ></textarea>
           </div>
@@ -86,7 +86,7 @@ function CreateMatiere({ setShowModal, professeurs, onAdd }) {
               value={newMatiere.professeur_id}
               onChange={handleChange}
               required
-              className="w-full border rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-blue-400"
+              className="w-full border rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-yellow-400"
             >
               <option value="">-- Sélectionner un professeur --</option>
               {professeurs.map((prof) => (
@@ -107,7 +107,7 @@ function CreateMatiere({ setShowModal, professeurs, onAdd }) {
             </button>
             <button
               type="submit"
-              className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-sm"
+              className="px-5 py-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg shadow-sm"
             >
               Créer
             </button>

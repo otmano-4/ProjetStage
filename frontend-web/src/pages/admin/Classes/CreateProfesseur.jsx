@@ -42,7 +42,7 @@ function CreateProfesseur({ setShowModal, classes, onAdd }) {
               value={newProf.nom}
               onChange={handleChange}
               required
-              className="w-full border rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-blue-400"
+              className="w-full border rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-yellow-400"
               placeholder="Nom du professeur"
             />
           </div>
@@ -55,7 +55,7 @@ function CreateProfesseur({ setShowModal, classes, onAdd }) {
               value={newProf.matiere}
               onChange={handleChange}
               required
-              className="w-full border rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-blue-400"
+              className="w-full border rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-yellow-400"
               placeholder="Ex: Mathématiques"
             />
           </div>
@@ -67,7 +67,7 @@ function CreateProfesseur({ setShowModal, classes, onAdd }) {
               value={newProf.classe_id}
               onChange={handleChange}
               required
-              className="w-full border rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-blue-400"
+              className="w-full border rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-yellow-400"
             >
               <option value="">-- Choisir une classe --</option>
               {classes.map((classe) => (
@@ -88,7 +88,7 @@ function CreateProfesseur({ setShowModal, classes, onAdd }) {
             </button>
             <button
               type="submit"
-              className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-sm"
+              className="px-5 py-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg shadow-sm"
             >
               Ajouter
             </button>

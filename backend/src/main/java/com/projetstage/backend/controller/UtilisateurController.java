@@ -43,27 +43,27 @@ public class UtilisateurController {
     }
 
     // ✅ Connexion (login)
-@PostMapping("/login")
-public LoginResponse login(@RequestBody Utilisateur loginData) {
+    @PostMapping("/login")
+    public LoginResponse login(@RequestBody Utilisateur loginData) {
 
-    Utilisateur u = utilisateurRepository.findByEmail(loginData.getEmail())
-            .filter(x -> x.getMotDePasse().equals(loginData.getMotDePasse()))
-            .orElseThrow(() -> new RuntimeException("Email ou mot de passe incorrect"));
+        Utilisateur u = utilisateurRepository.findByEmail(loginData.getEmail())
+                .filter(x -> x.getMotDePasse().equals(loginData.getMotDePasse()))
+                .orElseThrow(() -> new RuntimeException("Email ou mot de passe incorrect"));
 
-    Long classeId = null;
+        Long classeId = null;
 
-    if (u.getRole() == Utilisateur.Role.ETUDIANT) {
-        classeId = utilisateurRepository.findClasseIdByEtudiantId(u.getId());
+        if (u.getRole() == Utilisateur.Role.ETUDIANT) {
+            classeId = utilisateurRepository.findClasseIdByEtudiantId(u.getId());
+        }
+
+        return new LoginResponse(
+                u.getId(),
+                u.getNom(),
+                u.getEmail(),
+                u.getRole().name(),
+                classeId
+        );
     }
-
-    return new LoginResponse(
-            u.getId(),
-            u.getNom(),
-            u.getEmail(),
-            u.getRole().name(),
-            classeId
-    );
-}
 
     // ✅ Modifier un utilisateur
     @PutMapping("/{id}")

@@ -1,31 +1,21 @@
-import { useState } from "react";
-import axios from "axios";
+import { useState, useEffect } from "react";
+import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
+import { loginUser } from "../store/slices/authSlice";
 import imgauth from '../assets/imgauth.jpg';
 
 export default function Login() {
   const [email, setEmail] = useState("");
   const [motDePasse, setMotDePasse] = useState("");
-  const [erreur, setErreur] = useState("");
+
+  const dispatch = useDispatch();
   const navigate = useNavigate();
 
-  const handleLogin = async (e) => {
-    e.preventDefault();
-    setErreur("");
+  const { user, loading, error } = useSelector((state) => state.auth);
 
-    try {
-      const res = await axios.post("http://localhost:8080/api/utilisateurs/login", {
-        email,
-        motDePasse
-      });
-
-      const user = res.data;
-      console.log("✅ Utilisateur connecté :", user);
-
-      // Stocker dans localStorage
-      localStorage.setItem("utilisateur", JSON.stringify(user));
-
-      // Rediriger selon rôle
+  // Redirect automatically if user is already logged in
+  useEffect(() => {
+    if (user) {
       switch (user.role) {
         case "ETUDIANT":
           navigate("/etudiant/dashboard");
@@ -36,32 +26,31 @@ export default function Login() {
         case "ADMIN":
           navigate("/admin/dashboard");
           break;
-
-          navigate("/");
+        default:
+          navigate("/login");
       }
-    } catch (err) {
-      console.error("❌ Erreur de connexion :", err);
-      setErreur("Email ou mot de passe incorrect");
     }
+  }, [user, navigate]);
+
+  const handleLogin = (e) => {
+    e.preventDefault();
+    dispatch(loginUser({ email, motDePasse }));
   };
 
   return (
     <div className="flex p-8 space-x-20">
       <div 
-        className="bg-red-800 rounded-2xl  h-screen w-1/2"
-        style={{
-          backgroundImage: `url(${imgauth})`
-        }}  
-      >
-      </div>
+        className="rounded-2xl h-screen w-1/2 bg-cover bg-center"
+        style={{ backgroundImage: `url(${imgauth})` }}
+      />
 
-      <div className=" py-8 h-screen px-20 w-1/2 flex flex-col justify-between">
-        <div>
-          Logo
-        </div>
+      <div className="py-8 h-screen px-20 w-1/2 flex flex-col justify-between">
+        <div>Logo</div>
+
         <div className="text-white">
           <form onSubmit={handleLogin} className="flex flex-col gap-5">
             <h1 className="text-gray-600 text-3xl font-semibold text-center">Welcome back</h1>
+
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Adresse e-mail
@@ -92,15 +81,18 @@ export default function Login() {
 
             <button
               type="submit"
-              className="bg-blue-600 hover:bg-blue-700 focus:ring-4 focus:ring-blue-200 text-white font-semibold py-2.5 rounded-xl transition duration-200"
+              disabled={loading}
+              className={`bg-blue-600 hover:bg-blue-700 focus:ring-4 focus:ring-blue-200 text-white font-semibold py-2.5 rounded-xl transition duration-200 ${
+                loading ? "opacity-70 cursor-not-allowed" : ""
+              }`}
             >
-              Se connecter
+              {loading ? "Connexion..." : "Se connecter"}
             </button>
           </form>
 
-          {erreur && (
+          {error && (
             <p className="text-red-500 mt-4 text-center font-medium animate-pulse">
-              {erreur}
+              {error}
             </p>
           )}
 
@@ -115,6 +107,5 @@ export default function Login() {
         <div></div>
       </div>
     </div>
-
   );
 }

@@ -20,12 +20,7 @@ function CreateClasse({ setShowModal }) {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-
-
     dispatch(createClasse(formData))
-
-    
-
     setShowModal(false);
   };
 
@@ -58,7 +53,7 @@ function CreateClasse({ setShowModal }) {
               value={formData.nom}
               onChange={handleChange}
               placeholder="Ex: 6ème A"
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring focus:ring-blue-200"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring focus:ring-yellow-200"
               required
             />
           </div>
@@ -74,7 +69,7 @@ function CreateClasse({ setShowModal }) {
               value={formData.annee}
               onChange={handleChange}
               placeholder="Ex: 2024-2025"
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring focus:ring-blue-200"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring focus:ring-yellow-200"
             />
           </div>
 
@@ -89,7 +84,7 @@ function CreateClasse({ setShowModal }) {
             </button>
             <button
               type="submit"
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              className="px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700"
             >
               Ajouter
             </button>
