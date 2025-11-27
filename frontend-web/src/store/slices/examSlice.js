@@ -66,6 +66,19 @@ const examSlice = createSlice({
         state.loading = false;
         state.error = action.payload;
       })
+      
+      .addCase(fetchExamens.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(fetchExamens.fulfilled, (state, action) => {
+        state.loading = false;
+        state.list = action.payload;
+      })
+      .addCase(fetchExamens.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
 
       // create exam
       .addCase(createExamFun.pending, (state) => {

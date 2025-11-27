@@ -1,5 +1,7 @@
 package com.projetstage.backend.dto;
 
+import java.util.List;
+
 public class CreateExamenRequest {
     private String titre;
     private String description;
@@ -7,6 +9,8 @@ public class CreateExamenRequest {
     private boolean afficher;
     private Long classeId;
     private Long professeurId;
+
+    private List<CreateQuestionRequest> questions;
 
     // Getters and setters
     public String getTitre() { return titre; }
@@ -26,4 +30,7 @@ public class CreateExamenRequest {
 
     public Long getProfesseurId() { return professeurId; }
     public void setProfesseurId(Long professeurId) { this.professeurId = professeurId; }
+
+    public List<CreateQuestionRequest> getQuestions() { return questions; }
+    public void setQuestions(List<CreateQuestionRequest> questions) { this.questions = questions; }
 }

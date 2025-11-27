@@ -31,4 +31,32 @@ public class ExamenDTO {
     public LocalDateTime getDatePublication() { return datePublication; }
     public String getProfesseurNom() { return professeurNom; }
     public boolean  isAfficher() { return afficher; }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public void setTitre(String titre) {
+        this.titre = titre;
+    }
+
+    public void setProfesseurNom(String professeurNom) {
+        this.professeurNom = professeurNom;
+    }
+
+    public void setDatePublication(LocalDateTime datePublication) {
+        this.datePublication = datePublication;
+    }
+
+    public void setAfficher(boolean afficher) {
+        this.afficher = afficher;
+    }
+
+    public void setDuree(int duree) {
+        this.duree = duree;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
 }

@@ -10,7 +10,7 @@ public interface UtilisateurRepository extends JpaRepository<Utilisateur, Long> 
     Optional<Utilisateur> findByEmail(String email);
     
     @Query("SELECT c.id FROM Classe c JOIN c.etudiants e WHERE e.id = :etudiantId")
-Long findClasseIdByEtudiantId(Long etudiantId);
+    Long findClasseIdByEtudiantId(Long etudiantId);
 
     
 }

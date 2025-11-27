@@ -16,7 +16,7 @@ function Header() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
             <header className="flex justify-between items-center">
                 <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
-                    Bienvenue <span className={`${user?.role == "ADMIN" && "text-yellow-500" || user?.role == "PROFESSEUR" && "text-blue-500 bg-blue-50" || user?.role == "ETUDIANT" && "text-green-500 bg-green-50"}`}>{user.nom}</span>
+                    Bienvenue <span className={`${user?.role == "ADMIN" && "text-yellow-500" || user?.role == "PROFESSEUR" && "text-blue-500" || user?.role == "ETUDIANT" && "text-green-500"}`}>{user.nom}</span>
                 </h1>
 
                 <button onClick={()=> setIsOpen(!isOpen)}>

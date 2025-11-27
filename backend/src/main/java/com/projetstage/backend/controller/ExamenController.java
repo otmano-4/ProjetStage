@@ -7,10 +7,16 @@ import com.projetstage.backend.repository.ClasseRepository;
 import com.projetstage.backend.repository.ExamenRepository;
 import com.projetstage.backend.repository.UtilisateurRepository;
 import com.projetstage.backend.dto.ExamenDTO;
+import com.projetstage.backend.dto.ExamenDetailsDTO;
+import com.projetstage.backend.dto.QuestionDTO;
 import com.projetstage.backend.dto.CreateExamenRequest;
+
 import org.springframework.web.bind.annotation.*;
+
 import java.util.List;
 import java.time.LocalDateTime;
+
+import com.projetstage.backend.model.Question;
 
 @RestController
 @RequestMapping("/api/examens")
@@ -27,7 +33,6 @@ public class ExamenController {
         this.utilisateurRepository = utilisateurRepository;
     }
 
-    // ✅ Lister tous les examens
     @GetMapping
     public List<ExamenDTO> getAll() {
         return examenRepository.findAll()
@@ -36,7 +41,6 @@ public class ExamenController {
                 .toList();
     }
 
-    // ✅ Lister tous les examens à afficher
     @GetMapping("/afficher")
     public List<ExamenDTO> getAfficherExams() {
         return examenRepository.findByAfficherTrue()
@@ -46,7 +50,6 @@ public class ExamenController {
     }
 
 
-    // ✅ Lister les examens d'une classe
     @GetMapping("/classe/{classeId}")
     public List<ExamenDTO> getByClasse(@PathVariable Long classeId) {
         return examenRepository.findByClasseId(classeId)
@@ -55,37 +58,98 @@ public class ExamenController {
                 .toList();
     }
 
-    // ✅ Créer un examen
     @PostMapping
-    public ExamenDTO create(@RequestBody CreateExamenRequest request) {
-        // 1️⃣ Fetch professor
+    public ExamenDetailsDTO create(@RequestBody CreateExamenRequest request) {
         Utilisateur professeur = utilisateurRepository.findById(request.getProfesseurId())
             .orElseThrow(() -> new RuntimeException("Professeur not found"));
 
-        // 2️⃣ Fetch class
         Classe classe = classRepository.findById(request.getClasseId())
             .orElseThrow(() -> new RuntimeException("Classe not found"));
 
-        // 3️⃣ Map request to entity
         Examen examen = new Examen();
         examen.setTitre(request.getTitre());
         examen.setDescription(request.getDescription());
         examen.setDuree(request.getDuree());
         examen.setAfficher(request.isAfficher());
-        examen.setDatePublication(LocalDateTime.now()); // current timestamp
+        examen.setDatePublication(LocalDateTime.now());
         examen.setProfesseur(professeur);
         examen.setClasse(classe);
 
-        // 4️⃣ Save
-        Examen savedExamen = examenRepository.save(examen);
+        // Add questions
+        if (request.getQuestions() != null) {
+            request.getQuestions().forEach(qReq -> {
+                Question q = new Question();
+                q.setType(Question.Type.valueOf(qReq.getType()));
+                q.setContenu(qReq.getContenu());
+                q.setOptions(qReq.getOptions());
+                q.setReponseCorrecte(qReq.getReponseCorrecte());
+                examen.addQuestion(q);
+            });
+        }
 
-        // 5️⃣ Return DTO
-        return new ExamenDTO(savedExamen);
+        Examen saved = examenRepository.save(examen);
+
+        // Convert questions to DTO
+        List<QuestionDTO> questionDTOs = saved.getQuestions()
+            .stream()
+            .map(QuestionDTO::new)
+            .toList();
+
+        return new ExamenDetailsDTO(saved.getId(), saved.getTitre(), saved.getDescription(),
+            saved.getDuree(), saved.isAfficher(), saved.getDatePublication(),
+            saved.getProfesseur().getNom(), questionDTOs);
     }
+
 
     // ✅ Supprimer un examen
     @DeleteMapping("/{id}")
     public void delete(@PathVariable Long id) {
         examenRepository.deleteById(id);
     }
+
+
+   @GetMapping("/{id}")
+    public ExamenDetailsDTO getById(@PathVariable Long id) {
+        Examen examen = examenRepository.findWithQuestionsAndProfesseurById(id);
+        if (examen == null) throw new RuntimeException("Examen not found");
+
+        List<QuestionDTO> questionDTOs = examen.getQuestions()
+            .stream()
+            .map(QuestionDTO::new)
+            .toList();
+
+        return new ExamenDetailsDTO(
+            examen.getId(),
+            examen.getTitre(),
+            examen.getDescription(),
+            examen.getDuree(),
+            examen.isAfficher(),
+            examen.getDatePublication(),
+            examen.getProfesseur().getNom(),
+            questionDTOs
+        );
+    }
+
+    @PostMapping("/{examId}/questions")
+public QuestionDTO addQuestionToExam(
+        @PathVariable Long examId,
+        @RequestBody QuestionDTO questionDTO) {
+
+    Examen examen = examenRepository.findById(examId)
+            .orElseThrow(() -> new RuntimeException("Exam not found"));
+
+    Question q = new Question();
+    q.setType(Question.Type.valueOf(questionDTO.getType()));
+    q.setContenu(questionDTO.getContenu());
+    q.setOptions(questionDTO.getOptions());
+    q.setReponseCorrecte(questionDTO.getReponseCorrecte());
+
+    examen.addQuestion(q);
+    examenRepository.save(examen);
+
+    return new QuestionDTO(q);
 }
+
+
+}
+

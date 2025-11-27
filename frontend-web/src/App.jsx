@@ -26,10 +26,11 @@ import { useDispatch, useSelector } from 'react-redux'
 import {BookText, LayoutDashboard, Newspaper, Users} from 'lucide-react'
 import { useEffect } from "react";
 import { fetchExamens, fetchExamensByClasse } from "./store/slices/examSlice";
-import { fetchClasses } from "./store/slices/classSlice";
+import { fetchClasses, fetchClassesByProfesseur } from "./store/slices/classSlice";
 import { fetchUtilisateurs } from "./store/slices/usersSlice";
 import "./App.css"
 import UserDetails from "./pages/admin/Users/UserDetails";
+import ExamenDetails from "./pages/professeur/Examens/ExamenDetails";
 
 
 function App() {
@@ -46,12 +47,7 @@ function App() {
       "title": "Exams",
       "link": "/etudiant/exams",
       "icon": <Newspaper />
-    },
-    {
-      "title": "Exercices",
-      "link": "/etudiant/exercices",
-      "icon": <BookText />
-    },
+    }
   ]
   
   const profPages = [ 
@@ -64,12 +60,7 @@ function App() {
       "title": "Exams",
       "link": "/professeur/exams",
       "icon": <Newspaper />
-    },
-     {
-      "title": "Classe",
-      "link": "/professeur/classe",
-      "icon": <Newspaper />
-    },
+    }
   ]
 
   const adminPages = [
@@ -101,8 +92,8 @@ function App() {
       dispatch(fetchExamensByClasse(user?.classeId));
     }
     if(user?.role === "PROFESSEUR"){
-      dispatch(fetchClasses());
       dispatch(fetchExamens());
+      dispatch(fetchClassesByProfesseur(user?.id));
     }
     if(user?.role === "ADMIN"){
       dispatch(fetchUtilisateurs());
@@ -127,7 +118,10 @@ function App() {
 
         <Route element={<ProtectedRoute allowedRoles={["PROFESSEUR"]} />}>
           <Route path="/professeur/dashboard" element={<Dashboard pages={profPages}  />} />
-          <Route path="/professeur/exams" element={<ProfExamens pages={profPages} />} />
+          <Route path="/professeur/exams">
+            <Route index element={<ProfExamens pages={profPages} />} />
+            <Route path=":id" element={<ExamenDetails pages={profPages} />} />
+          </Route>
         </Route>
 
         <Route element={<ProtectedRoute allowedRoles={["ADMIN"]} />}>

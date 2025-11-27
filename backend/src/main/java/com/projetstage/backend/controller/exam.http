@@ -29,3 +29,22 @@ Accept: application/json
   "email": "wrong@example.com",
   "motDePasse": "badpass"
 }
+
+
+
+### 
+POST http://localhost:8080/api/classes/10/add-professeur/1
+Content-Type: application/json
+
+
+
+### Add a question to exam with ID 1
+POST http://localhost:8080/api/examens/2/questions
+Content-Type: application/json
+
+{
+  "type": "QCM",
+  "contenu": "Quelle est la couleur du ciel?",
+  "options": "Bleu,Vert,Jaune,Rouge",
+  "reponseCorrecte": "Bleu"
+}

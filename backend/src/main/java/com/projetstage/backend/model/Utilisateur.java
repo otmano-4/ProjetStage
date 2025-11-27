@@ -28,6 +28,9 @@ public class Utilisateur {
     @ManyToMany(mappedBy = "etudiants")
     private List<Classe> classes;
 
+    @ManyToMany(mappedBy = "professeurs")
+    private List<Classe> profClasses;
+
 
 
 
@@ -73,5 +76,10 @@ public class Utilisateur {
 
     public List<Classe> getClasses() {
         return classes;
+    }
+
+    
+    public List<Classe> getProfClasses() {
+        return profClasses;
     }
 }

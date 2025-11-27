@@ -20,7 +20,7 @@ export default function Examens({ pages }) {
           {/* Title */}
           <div className="mb-8">
             <h1 className="text-3xl font-bold text-gray-800 flex items-center gap-2">
-              <FileText className="text-blue-600" size={28} />
+              <FileText className="text-green-600" size={28} />
               Examens de la classe
             </h1>
           </div>
@@ -38,11 +38,11 @@ export default function Examens({ pages }) {
             {examens.map((e, index) => (
               <li
                 key={index}
-                className="border border-blue-100 bg-white rounded-2xl shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300 p-6"
+                className="border border-green-100 bg-white rounded-2xl shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300 p-6"
               >
                 <h2 className="text-xl font-semibold text-gray-800 mb-2">{e.titre}</h2>
                 <p className="text-gray-600 mb-4 line-clamp-3">{e.description}</p>
-                <div className="flex items-center gap-2 text-blue-600 font-medium">
+                <div className="flex items-center gap-2 text-green-600 font-medium">
                   <Clock size={18} />
                   <span>Durée : {e.duree} min</span>
                 </div>
@@ -51,9 +51,8 @@ export default function Examens({ pages }) {
           </ul>
 
           {/* Historique section */}
-          <section className="mt-12">
+          {/* <section className="mt-12">
             <h2 className="text-2xl font-semibold text-gray-800 flex items-center gap-2 mb-6">
-              <CheckCircle className="text-green-500" size={24} />
               Historique
             </h2>
 
@@ -85,7 +84,7 @@ export default function Examens({ pages }) {
                 );
               })}
             </div>
-          </section>
+          </section> */}
         </main>
       </div>
     </div>

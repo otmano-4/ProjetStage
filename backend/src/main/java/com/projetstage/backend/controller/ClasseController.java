@@ -18,6 +18,7 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 import com.projetstage.backend.repository.UtilisateurRepository;
 
@@ -58,13 +59,27 @@ public class ClasseController {
         classeRepository.deleteById(id);
     }
 
-    // ✅ Récupérer une classe par ID avec ses étudiants
+    @Transactional
     @GetMapping("/{id}")
     public ClasseDTO getById(@PathVariable Long id) {
-        Classe classe = classeRepository.findByIdWithEtudiants(id)
+        Classe classe = classeRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Classe non trouvée"));
+
+        // Force initialization of lazy collections
+        classe.getEtudiants().size();
+        classe.getProfesseurs().size();
+
         return new ClasseDTO(classe);
     }
+
+
+    // @GetMapping("/{id}")
+    // public ClasseDTO getById(@PathVariable Long id) {
+    //     Classe classe = classeRepository.findByIdWithEtudiantsAndProfesseurs(id)
+    //             .orElseThrow(() -> new RuntimeException("Classe non trouvée"));
+    //     return new ClasseDTO(classe);
+    // }
+
 
 
     @PostMapping("/{classeId}/add-etudiant/{userId}")
@@ -86,7 +101,7 @@ public class ClasseController {
 
     @Transactional
     @PostMapping("/{classeId}/upload-excel")
-    public Classe uploadStudentsExcel(
+    public ClasseDTO uploadStudentsExcel(
             @PathVariable Long classeId,
             @RequestParam("file") MultipartFile file) {
 
@@ -114,17 +129,18 @@ public class ClasseController {
                             return utilisateurRepository.save(u);
                         });
 
-                if (!classe.getEtudiants().contains(etudiant)) {
-                    classe.getEtudiants().add(etudiant);
-                }
+                classe.getEtudiants().add(etudiant);
             }
 
-            return classeRepository.save(classe);
+            classeRepository.save(classe);
+
+            return new ClasseDTO(classe);
 
         } catch (Exception e) {
             throw new RuntimeException("Error processing Excel file: " + e.getMessage());
         }
     }
+
 
     private String getCellValue(Cell cell) {
         if (cell == null) return "";
@@ -162,5 +178,42 @@ public class ClasseController {
         return ResponseEntity.ok(new ClasseDTO(classe));
     }
 
+
+
+    @Transactional
+    @PostMapping("/{classeId}/add-professeur/{userId}")
+    public ClasseDTO addProfesseurToClasse(@PathVariable Long classeId, @PathVariable Long userId) {
+        Classe classe = classeRepository.findById(classeId)
+                .orElseThrow(() -> new RuntimeException("Classe not found"));
+
+        Utilisateur user = utilisateurRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        if (user.getRole() != Utilisateur.Role.PROFESSEUR) {
+            throw new RuntimeException("You can only add PROFESSEUR to a class");
+        }
+
+        if (classe.getProfesseurs() == null) {
+            classe.setProfesseurs(new java.util.HashSet<>());
+        }
+
+        classe.getProfesseurs().add(user);
+        classeRepository.save(classe);
+
+        // Return a DTO instead of the entity
+        return new ClasseDTO(classe);  
+    }
+
+
+
+    
+
+    @GetMapping("/professeur/{profId}")
+    public List<ClasseDTOetudiant> getClassesByProfesseur(@PathVariable Long profId) {
+        return classeRepository.findAllByProfesseurId(profId)
+                .stream()
+                .map(ClasseDTOetudiant::new)
+                .collect(Collectors.toList());
+    }
 
 }

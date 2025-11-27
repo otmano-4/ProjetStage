@@ -2,10 +2,13 @@ package com.projetstage.backend.model;
 
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 @Entity
 @Table(name = "examens")
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class Examen {
 
     @Id
@@ -17,28 +20,35 @@ public class Examen {
     @Column(columnDefinition = "TEXT")
     private String description;
 
-    private int duree; // en minutes
+    private int duree; // minutes
 
     private boolean afficher;
 
     private LocalDateTime datePublication;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "professeur_id", nullable = false)
     @JsonIgnoreProperties({"classes", "examens", "reponses", "motDePasse"})
     private Utilisateur professeur;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "classe_id", nullable = false)
     @JsonIgnoreProperties({"etudiants"})
     private Classe classe;
 
-    // --- Constructors ---
+    @OneToMany(
+        mappedBy = "examen",
+        cascade = CascadeType.ALL,
+        orphanRemoval = true,
+        fetch = FetchType.LAZY
+    )
+    private List<Question> questions = new ArrayList<>();
+
+
     public Examen() {}
 
     public Examen(String titre, String description, int duree, boolean afficher,
-                  LocalDateTime datePublication, Utilisateur professeur,
-                  Classe classe) {
+                  LocalDateTime datePublication, Utilisateur professeur, Classe classe) {
         this.titre = titre;
         this.description = description;
         this.duree = duree;
@@ -48,7 +58,33 @@ public class Examen {
         this.classe = classe;
     }
 
-    // --- Getters ---
+    public void addQuestion(Question q) {
+        if (questions == null) questions = new ArrayList<>();
+        questions.add(q);
+        q.setExamen(this);
+    }
+
+
+
+    public void removeQuestion(Question q) {
+        questions.remove(q);
+        q.setExamen(null);
+    }
+
+
+    public List<Question> getQuestions() {
+        return questions;
+    }
+
+    public void setQuestions(List<Question> questions) {
+        this.questions = questions;
+    }
+
+
+    public void setId(Long id){
+        this.id  = id;
+    }
+
     public Long getId() {
         return id;
     }
@@ -77,42 +113,37 @@ public class Examen {
         return professeur;
     }
 
-    public Classe getClasse() {
-        return classe;
-    }
-
-
-    // --- Setters ---
-    public void setId(Long id) {
-        this.id = id;
-    }
-
     public void setTitre(String titre) {
         this.titre = titre;
     }
 
     public void setDescription(String description) {
-        this.description = description;
+        throw new UnsupportedOperationException("Not supported yet.");
     }
 
     public void setDuree(int duree) {
-        this.duree = duree;
+        throw new UnsupportedOperationException("Not supported yet.");
     }
 
     public void setAfficher(boolean afficher) {
-        this.afficher = afficher;
+        throw new UnsupportedOperationException("Not supported yet.");
     }
 
-    public void setDatePublication(LocalDateTime datePublication) {
-        this.datePublication = datePublication;
+    public void setDatePublication(LocalDateTime now) {
+        throw new UnsupportedOperationException("Not supported yet.");
     }
 
     public void setProfesseur(Utilisateur professeur) {
-        this.professeur = professeur;
+        throw new UnsupportedOperationException("Not supported yet.");
     }
 
     public void setClasse(Classe classe) {
-        this.classe = classe;
+        throw new UnsupportedOperationException("Not supported yet.");
     }
 
+
+    
 }
+
+
+

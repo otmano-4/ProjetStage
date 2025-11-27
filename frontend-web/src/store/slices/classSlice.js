@@ -59,6 +59,44 @@ export const addStudentToClasse = createAsyncThunk(
   }
 );
 
+
+// === Add professor manually ===
+export const addProfesseurToClasse = createAsyncThunk(
+  "classes/addProfesseur",
+  async ({ classeId, idProf }, { rejectWithValue }) => {
+    try {
+      const response = await axios.post(
+        `${API_URL}/${classeId}/add-professeur/${idProf}`,
+        {}, // body can be empty, your API uses path params
+        { headers: { "Content-Type": "application/json" } }
+      );
+      return response.data; // returns updated class
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data || "Erreur lors de l'ajout du professeur"
+      );
+    }
+  }
+);
+
+
+
+// classSlice.js
+export const fetchClassesByProfesseur = createAsyncThunk(
+  "classes/fetchByProfesseur",
+  async (profId, { rejectWithValue }) => {
+    try {
+      const response = await axios.get(`${API_URL}/professeur/${profId}`);
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(error.response?.data || "Erreur lors du chargement des classes");
+    }
+  }
+);
+
+
+
+
 const initialState = {
   data: [],
   selectedClasse: null,
@@ -118,7 +156,29 @@ const classSlice = createSlice({
       // Add student
       .addCase(addStudentToClasse.fulfilled, (state, action) => {
         state.selectedClasse = action.payload;
+      })
+
+      .addCase(addProfesseurToClasse.fulfilled, (state, action) => {
+        state.selectedClasse = action.payload;
+      })
+
+
+
+      // inside extraReducers
+      .addCase(fetchClassesByProfesseur.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(fetchClassesByProfesseur.fulfilled, (state, action) => {
+        state.loading = false;
+        state.data = action.payload; // or a new field like state.classesByProf
+      })
+      .addCase(fetchClassesByProfesseur.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
       });
+
+
   },
 });
 

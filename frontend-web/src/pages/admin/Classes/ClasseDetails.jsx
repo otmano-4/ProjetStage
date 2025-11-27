@@ -1,13 +1,14 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { Link, useParams } from "react-router-dom";
 import { motion } from "framer-motion";
-import { UserCheck, PlusCircle, Upload, ChevronDown, ChevronUp } from "lucide-react";
+import { PlusCircle, Upload, ChevronDown, ChevronUp } from "lucide-react";
 import Header from "../../../components/Layouts/Header";
 import Aside from "../../../components/Layouts/Aside";
 import { useSelector, useDispatch } from "react-redux";
 import { fetchClasseById } from "../../../store/slices/classSlice";
 import AddStudentModal from "./AddStudentModal";
 import ImportStudentsModal from "./ImportStudentsModal";
+import AddProfesseurModal from "./AddProfesseurModal";
 
 function ClasseDetails({ pages }) {
   const { id } = useParams();
@@ -18,6 +19,7 @@ function ClasseDetails({ pages }) {
   const [showImportModal, setShowImportModal] = useState(false);
 
   const [showStudents, setShowStudentts] = useState(false);
+  const [showAddProfModal, setShowAddProfModal] = useState(false);
 
 
 
@@ -30,6 +32,10 @@ function ClasseDetails({ pages }) {
       student.nom.toLowerCase().includes(search.toLowerCase())
     );
   }, [search, selectedClasse]);
+
+
+
+
 
 
 
@@ -77,9 +83,17 @@ function ClasseDetails({ pages }) {
 
            {/* Professors List */}
           <section className="bg-white rounded-ms mb-8 shadow-sm border border-gray-200 p-6">
-            <h2 className="text-xl font-semibold mb-4 flex items-center gap-2 text-gray-800">
-              <UserCheck className="w-5 h-5 text-blue-500" /> Liste des professeurs
-            </h2>
+            <div className="flex items-center mb-4 justify-between">
+              <h2 className="text-xl font-semibold flex items-center gap-2 text-gray-800">
+                Liste des professeurs
+              </h2>
+              <button
+                onClick={() => setShowAddProfModal(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded-xl shadow-sm mt-4"
+              >
+                <PlusCircle className="w-5 h-5" /> Ajouter un professeur
+              </button>
+            </div>
 
             {selectedClasse.professeurs?.length === 0 ? (
               <p className="text-gray-500 text-sm">Aucun professeur assigné pour le moment.</p>
@@ -96,7 +110,7 @@ function ClasseDetails({ pages }) {
                   <tbody>
                     {selectedClasse.professeurs?.map((prof, index) => (
                       <tr
-                        key={prof.id || index}
+                        key={index}
                         className="border-b hover:bg-gray-50 transition"
                       >
                         <td className="px-4 py-2">{index + 1}</td>
@@ -124,6 +138,37 @@ function ClasseDetails({ pages }) {
 
             {showStudents && (
               <div className="bg-white px-8 pb-4">
+                <div className="mb-4 flex justify-between items-center mb-6">
+                  {selectedClasse.etudiants?.length != 0 ? (
+                  <input
+                    type="text"
+                    placeholder="Rechercher par nom..."
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    className="w-full sm:w-64 border rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                  />
+                  ): <div></div>}
+
+                  <div className="flex gap-3">
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      onClick={() => setShowImportModal(true)}
+                      className="flex items-center gap-2 px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded-xl shadow-sm"
+                    >
+                      <Upload className="w-5 h-5" /> Importer (.xlsx)
+                    </motion.button>
+
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      onClick={() => setShowAddModal(true)}
+                      className="flex items-center gap-2 px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded-xl shadow-sm"
+                    >
+                      <PlusCircle className="w-5 h-5" /> Ajouter un élève
+                    </motion.button>
+                  </div>
+                </div>
                 {selectedClasse.etudiants?.length === 0 ? (
                   <p className="text-gray-500 text-sm">
                     Aucun élève ajouté pour le moment.
@@ -131,35 +176,7 @@ function ClasseDetails({ pages }) {
                 ) : (
                   <>
                     {/* Search Input */}
-                    <div className="mb-4 flex justify-between items-center mb-6">
-                      <input
-                        type="text"
-                        placeholder="Rechercher par nom..."
-                        value={search}
-                        onChange={(e) => setSearch(e.target.value)}
-                        className="w-full sm:w-64 border rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-yellow-500"
-                      />
-
-                      <div className="flex gap-3">
-                        <motion.button
-                          whileHover={{ scale: 1.05 }}
-                          whileTap={{ scale: 0.95 }}
-                          onClick={() => setShowImportModal(true)}
-                          className="flex items-center gap-2 px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded-xl shadow-sm"
-                        >
-                          <Upload className="w-5 h-5" /> Importer (.xlsx)
-                        </motion.button>
-
-                        <motion.button
-                          whileHover={{ scale: 1.05 }}
-                          whileTap={{ scale: 0.95 }}
-                          onClick={() => setShowAddModal(true)}
-                          className="flex items-center gap-2 px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded-xl shadow-sm"
-                        >
-                          <PlusCircle className="w-5 h-5" /> Ajouter un élève
-                        </motion.button>
-                      </div>
-                    </div>
+                    
 
                     <div className="overflow-x-auto">
                       <table className="min-w-full divide-y divide-gray-200 shadow-md rounded-lg overflow-hidden">
@@ -211,7 +228,8 @@ function ClasseDetails({ pages }) {
 
       {showAddModal && <AddStudentModal classeId={id} setShowModal={setShowAddModal} />}
       {showImportModal && <ImportStudentsModal setShowModal={setShowImportModal} classeId={id} />}
-    </div>
+      {showAddProfModal && <AddProfesseurModal classeId={id} setShowModal={setShowAddProfModal} />}
+    </div>  
   );
 }
 

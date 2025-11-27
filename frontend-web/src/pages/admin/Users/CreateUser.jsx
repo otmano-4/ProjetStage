@@ -52,8 +52,8 @@ function CreateUser({ setShowModal }) {
           <input
             type="password"
             placeholder="Mot de passe"
-            value={newUser.mot_de_passe}
-            onChange={(e) => setNewUser({ ...newUser, mot_de_passe: e.target.value })}
+            value={newUser.motDePasse}
+            onChange={(e) => setNewUser({ ...newUser, motDePasse: e.target.value })}
             className="border rounded-lg p-2 w-full"
           />
 
