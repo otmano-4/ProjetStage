@@ -75,8 +75,7 @@ Content-Type: application/json
 
 {
   "type": "MULTIPLE",
-  "contenu": "What is 2+2?",
-  "options": "1,2,3,4",
-  "reponseCorrecte": "4"
+  "titre": "What is 2+2?",
+  "choix": "1,2,3,4",
+  "correct": "4"
 }
-

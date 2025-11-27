@@ -124,32 +124,36 @@ export default function ExamenDetails({ pages }) {
             </div>
 
             {questions.length > 0 && (
-              <ul className="mt-4 space-y-2">
-                {questions.map((q, index) => (
-                  <li
-                    key={index}
-                    className="flex justify-between items-center p-2 border rounded"
-                  >
-                    <div>
-                      <p className="font-medium">{q.contenu}</p>
-                      <p className="text-sm text-gray-500">
-                        Options: {q.options} |
-                        <span className="ml-1">
-                          Correct: {q.reponseCorrecte}
-                        </span>
-                      </p>
-                    </div>
+  <ul className="mt-4 space-y-2">
+    {questions.map((q, index) => {
+      const optionsArray = (q.options || q.choix || "").split(","); // split string into array
+      return (
+        <li
+          key={index}
+          className="flex justify-between items-center p-2 border rounded"
+        >
+          <div>
+            <p className="font-medium">{q.contenu || q.titre}</p>
+            <p className="text-sm text-gray-500">
+              Options: {optionsArray.join(", ")} |
+              <span className="ml-1">
+                Correct: {q.reponseCorrecte || q.correct}
+              </span>
+            </p>
+          </div>
 
-                    <button
-                      onClick={() => handleDelete(index)}
-                      className="text-red-600 hover:underline"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
+          <button
+            onClick={() => handleDelete(index)}
+            className="text-red-600 hover:underline"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+        </li>
+      );
+    })}
+  </ul>
+)}
+
           </div>
         </main>
       </div>
