@@ -9,6 +9,7 @@ import com.projetstage.backend.repository.UtilisateurRepository;
 import com.projetstage.backend.dto.ExamenDTO;
 import com.projetstage.backend.dto.ExamenDetailsDTO;
 import com.projetstage.backend.dto.QuestionDTO;
+import com.projetstage.backend.dto.ClasseDTO;
 import com.projetstage.backend.dto.CreateExamenRequest;
 
 import org.springframework.web.bind.annotation.*;
@@ -16,6 +17,8 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.time.LocalDateTime;
 
+import com.projetstage.backend.dto.CreateQuestionRequestDTO;
+import com.projetstage.backend.dto.ExamenDetailsQuestionsDTO;
 import com.projetstage.backend.model.Question;
 
 @RestController
@@ -75,81 +78,62 @@ public class ExamenController {
         examen.setProfesseur(professeur);
         examen.setClasse(classe);
 
-        // Add questions
-        if (request.getQuestions() != null) {
-            request.getQuestions().forEach(qReq -> {
-                Question q = new Question();
-                q.setType(Question.Type.valueOf(qReq.getType()));
-                q.setContenu(qReq.getContenu());
-                q.setOptions(qReq.getOptions());
-                q.setReponseCorrecte(qReq.getReponseCorrecte());
-                examen.addQuestion(q);
-            });
-        }
-
         Examen saved = examenRepository.save(examen);
-
-        // Convert questions to DTO
-        List<QuestionDTO> questionDTOs = saved.getQuestions()
-            .stream()
-            .map(QuestionDTO::new)
-            .toList();
 
         return new ExamenDetailsDTO(saved.getId(), saved.getTitre(), saved.getDescription(),
             saved.getDuree(), saved.isAfficher(), saved.getDatePublication(),
-            saved.getProfesseur().getNom(), questionDTOs);
+            saved.getProfesseur().getNom());
     }
 
 
-    // ✅ Supprimer un examen
     @DeleteMapping("/{id}")
     public void delete(@PathVariable Long id) {
         examenRepository.deleteById(id);
     }
 
 
-   @GetMapping("/{id}")
-    public ExamenDetailsDTO getById(@PathVariable Long id) {
-        Examen examen = examenRepository.findWithQuestionsAndProfesseurById(id);
-        if (examen == null) throw new RuntimeException("Examen not found");
+    @GetMapping("/{id}")
+    public ExamenDTO getById(@PathVariable Long id) {
+        Examen examen = examenRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Examen non trouvée"));
 
-        List<QuestionDTO> questionDTOs = examen.getQuestions()
-            .stream()
-            .map(QuestionDTO::new)
-            .toList();
-
-        return new ExamenDetailsDTO(
-            examen.getId(),
-            examen.getTitre(),
-            examen.getDescription(),
-            examen.getDuree(),
-            examen.isAfficher(),
-            examen.getDatePublication(),
-            examen.getProfesseur().getNom(),
-            questionDTOs
-        );
+        return new ExamenDTO(examen);
     }
 
-    @PostMapping("/{examId}/questions")
-public QuestionDTO addQuestionToExam(
-        @PathVariable Long examId,
-        @RequestBody QuestionDTO questionDTO) {
+    @GetMapping("/{id}/details")
+public ExamenDetailsQuestionsDTO getExamWithQuestions(@PathVariable Long id) {
 
+    Examen examen = examenRepository.findByIdWithQuestions(id)
+            .orElseThrow(() -> new RuntimeException("Examen not found"));
+
+    List<QuestionDTO> q = examen.getQuestions()
+                                .stream()
+                                .map(QuestionDTO::new)
+                                .toList();
+
+    return new ExamenDetailsQuestionsDTO(examen, q);
+}
+
+
+    @PostMapping("/{examId}/questions")
+public QuestionDTO addQuestion(
+        @PathVariable Long examId,
+        @RequestBody CreateQuestionRequestDTO req
+) {
     Examen examen = examenRepository.findById(examId)
-            .orElseThrow(() -> new RuntimeException("Exam not found"));
+            .orElseThrow(() -> new RuntimeException("Examen not found"));
 
     Question q = new Question();
-    q.setType(Question.Type.valueOf(questionDTO.getType()));
-    q.setContenu(questionDTO.getContenu());
-    q.setOptions(questionDTO.getOptions());
-    q.setReponseCorrecte(questionDTO.getReponseCorrecte());
+    q.setTitre(req.getTitre());
+    q.setType(Question.Type.valueOf(req.getType())); // must match enum
+    q.setChoix(req.getChoix());
+    q.setCorrect(req.getCorrect());
 
     examen.addQuestion(q);
-    examenRepository.save(examen);
+    examenRepository.save(examen); // cascades question
 
     return new QuestionDTO(q);
 }
-
 
 }
 

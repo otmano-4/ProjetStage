@@ -18,7 +18,7 @@ export default function ExamenDetails({ pages }) {
 
   // TODO: Replace this with actual API call
     useEffect(() => {
-        fetch(`http://localhost:8080/api/examens/${id}`)
+        fetch(`http://localhost:8080/api/examens/${id}/details`)
             .then(res => res.json())
             .then(data => {
             setExam(data);

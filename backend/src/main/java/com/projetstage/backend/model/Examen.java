@@ -1,9 +1,11 @@
 package com.projetstage.backend.model;
 
 import jakarta.persistence.*;
+
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 @Entity
@@ -26,7 +28,7 @@ public class Examen {
 
     private LocalDateTime datePublication;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "professeur_id", nullable = false)
     @JsonIgnoreProperties({"classes", "examens", "reponses", "motDePasse"})
     private Utilisateur professeur;
@@ -36,12 +38,7 @@ public class Examen {
     @JsonIgnoreProperties({"etudiants"})
     private Classe classe;
 
-    @OneToMany(
-        mappedBy = "examen",
-        cascade = CascadeType.ALL,
-        orphanRemoval = true,
-        fetch = FetchType.LAZY
-    )
+    @OneToMany(mappedBy = "examen", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Question> questions = new ArrayList<>();
 
 
@@ -56,28 +53,6 @@ public class Examen {
         this.datePublication = datePublication;
         this.professeur = professeur;
         this.classe = classe;
-    }
-
-    public void addQuestion(Question q) {
-        if (questions == null) questions = new ArrayList<>();
-        questions.add(q);
-        q.setExamen(this);
-    }
-
-
-
-    public void removeQuestion(Question q) {
-        questions.remove(q);
-        q.setExamen(null);
-    }
-
-
-    public List<Question> getQuestions() {
-        return questions;
-    }
-
-    public void setQuestions(List<Question> questions) {
-        this.questions = questions;
     }
 
 
@@ -118,31 +93,45 @@ public class Examen {
     }
 
     public void setDescription(String description) {
-        throw new UnsupportedOperationException("Not supported yet.");
+        this.description = description;
     }
-
+    
     public void setDuree(int duree) {
-        throw new UnsupportedOperationException("Not supported yet.");
+        this.duree = duree;
     }
-
+    
     public void setAfficher(boolean afficher) {
-        throw new UnsupportedOperationException("Not supported yet.");
+        this.afficher = afficher;
     }
 
     public void setDatePublication(LocalDateTime now) {
-        throw new UnsupportedOperationException("Not supported yet.");
+        this.datePublication = now;
     }
-
-    public void setProfesseur(Utilisateur professeur) {
-        throw new UnsupportedOperationException("Not supported yet.");
-    }
-
-    public void setClasse(Classe classe) {
-        throw new UnsupportedOperationException("Not supported yet.");
-    }
-
-
     
+    public void setProfesseur(Utilisateur professeur) {
+        this.professeur = professeur;
+    }
+    
+    public void setClasse(Classe classe) {
+        this.classe = classe;
+    }
+
+    public List<Question> getQuestions() {
+        return questions;
+    }
+
+    public Classe getClasse() {
+        return classe;
+    }
+
+    public void setQuestions(List<Question> questions) {
+        this.questions = questions;
+    }
+
+    public void addQuestion(Question q) {
+        questions.add(q);
+        q.setExamen(this);
+    }
 }
 
 

@@ -1,90 +1,81 @@
 package com.projetstage.backend.model;
 
-import jakarta.persistence.*;
-import lombok.*;
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
 
 @Entity
 @Table(name = "questions")
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
-@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class Question {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    private String titre;
+
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private Type type; // QCM, VF, etc.
+    private Type type;
 
-    @Column(columnDefinition = "TEXT", nullable = false)
-    private String contenu;
-
-    // Stored as JSON-style text for flexibility
-    @Column(columnDefinition = "TEXT")
-    private String options;
-
-    @Column(name = "reponse_correcte", columnDefinition = "TEXT")
-    private String reponseCorrecte;
+    private String choix; // JSON string or comma-separated
+    private String correct;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "examen_id", nullable = false)
-    @JsonIgnoreProperties("questions")
+    @JoinColumn(name = "examen_id")
     private Examen examen;
+
+    
 
     public Long getId() {
         return id;
+    }
+
+    public String getTitre() {
+        return titre;
     }
 
     public Type getType() {
         return type;
     }
 
-    public String getOptions() {
-        return options;
+    public String getChoix() {
+        return choix;
+    }
+
+    public String getCorrect() {
+        return correct;
     }
 
     public Examen getExamen() {
         return examen;
     }
 
-    public String getReponseCorrecte() {
-        return reponseCorrecte;
+    void setExamen(Examen aThis) {
+        this.examen = aThis;
     }
 
-    public String getContenu() {
-        return contenu;
+    public void setTitre(String titre) {
+        this.titre = titre;
     }
-
-    public void setExamen(Examen examen) {
-        this.examen = examen;
-    }
-
-    public void setReponseCorrecte(String reponseCorrecte) {
-        this.reponseCorrecte = reponseCorrecte;
-    }
-
-    public void setOptions(String options) {
-        this.options = options;
-    }
-
-    public void setContenu(String contenu) {
-        this.contenu = contenu;
-    }
-
+    
     public void setType(Type valueOf) {
         this.type = valueOf;
     }
+    
+    public void setChoix(String choix) {
+        this.choix = choix;
+    }
+
+    public void setCorrect(String correct) {
+        this.correct = correct;
+    }
 
     public enum Type {
-        QCM,       // Multiple choice
-        VF,        // True/False
-        OUI_NON,
-        TEXTE_TROU,
-        OUVERTE,
-        PIECE_JOINTE
+        TEXT, MULTIPLE, TRUE_FALSE
     }
 }

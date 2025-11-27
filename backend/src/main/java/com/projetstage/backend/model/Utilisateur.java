@@ -35,9 +35,6 @@ public class Utilisateur {
 
 
 
-
-
-
     public void setNom(String nom) {
         this.nom = nom;
     }

@@ -11,11 +11,10 @@ public class ExamenDetailsDTO {
     private boolean afficher;
     private LocalDateTime datePublication;
     private String professeurNom;
-    private List<QuestionDTO> questions;
 
     public ExamenDetailsDTO(Long id, String titre, String description, int duree,
                             boolean afficher, LocalDateTime datePublication,
-                            String professeurNom, List<QuestionDTO> questions) {
+                            String professeurNom) {
         this.id = id;
         this.titre = titre;
         this.description = description;
@@ -23,7 +22,6 @@ public class ExamenDetailsDTO {
         this.afficher = afficher;
         this.datePublication = datePublication;
         this.professeurNom = professeurNom;
-        this.questions = questions;
     }
 
     public Long getId() { return id; }
@@ -33,5 +31,4 @@ public class ExamenDetailsDTO {
     public boolean isAfficher() { return afficher; }
     public LocalDateTime getDatePublication() { return datePublication; }
     public String getProfesseurNom() { return professeurNom; }
-    public List<QuestionDTO> getQuestions() { return questions; }
 }
