@@ -42,3 +42,41 @@ Content-Type: application/json
 GET http://localhost:8080/api/examens/5/details
 Content-Type: application/json
 
+
+
+############################################
+# ADD a question to exam (one by one)
+############################################
+POST http://localhost:8080/api/examens/5/questions
+Content-Type: application/json
+
+{
+  "type": "CHOICE",
+  "contenu": "What is Java Spring Boot?",
+  "options": "Framework, Database, IDE",
+  "reponseCorrecte": "Framework"
+}
+
+
+############################################
+POST http://localhost:8080/api/examens/5/questions
+Content-Type: application/json
+
+{
+  "type": "CHOICE",
+  "contenu": "What is the capital of France?",
+  "options": ["Paris", "Lyon", "Marseille"],
+  "reponseCorrecte": "Paris"
+}
+
+############################################
+POST http://localhost:8080/api/examens/5/questions
+Content-Type: application/json
+
+{
+  "type": "MULTIPLE",
+  "contenu": "What is 2+2?",
+  "options": "1,2,3,4",
+  "reponseCorrecte": "4"
+}
+

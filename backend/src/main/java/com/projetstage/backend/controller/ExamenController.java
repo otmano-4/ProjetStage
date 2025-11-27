@@ -11,6 +11,7 @@ import com.projetstage.backend.dto.ExamenDetailsDTO;
 import com.projetstage.backend.dto.QuestionDTO;
 import com.projetstage.backend.dto.ClasseDTO;
 import com.projetstage.backend.dto.CreateExamenRequest;
+import com.projetstage.backend.dto.CreateQuestionDTO;
 
 import org.springframework.web.bind.annotation.*;
 
@@ -20,6 +21,7 @@ import java.time.LocalDateTime;
 import com.projetstage.backend.dto.CreateQuestionRequestDTO;
 import com.projetstage.backend.dto.ExamenDetailsQuestionsDTO;
 import com.projetstage.backend.model.Question;
+import jakarta.transaction.Transactional;
 
 @RestController
 @RequestMapping("/api/examens")
@@ -115,22 +117,44 @@ public ExamenDetailsQuestionsDTO getExamWithQuestions(@PathVariable Long id) {
 }
 
 
-    @PostMapping("/{examId}/questions")
+//     @PostMapping("/{examId}/questions")
+// public QuestionDTO addQuestion(
+//         @PathVariable Long examId,
+//         @RequestBody CreateQuestionRequestDTO req
+// ) {
+//     Examen examen = examenRepository.findById(examId)
+//             .orElseThrow(() -> new RuntimeException("Examen not found"));
+
+//     Question q = new Question();
+//     q.setTitre(req.getTitre());
+//     q.setType(Question.Type.valueOf(req.getType())); // must match enum
+//     q.setChoix(req.getChoix());
+//     q.setCorrect(req.getCorrect());
+
+//     examen.addQuestion(q);
+//     examenRepository.save(examen); // cascades question
+
+//     return new QuestionDTO(q);
+// }
+
+
+@PostMapping("/{id}/questions")
+@Transactional
 public QuestionDTO addQuestion(
-        @PathVariable Long examId,
-        @RequestBody CreateQuestionRequestDTO req
+        @PathVariable Long id,
+        @RequestBody CreateQuestionDTO dto
 ) {
-    Examen examen = examenRepository.findById(examId)
+    Examen examen = examenRepository.findById(id)
             .orElseThrow(() -> new RuntimeException("Examen not found"));
 
     Question q = new Question();
-    q.setTitre(req.getTitre());
-    q.setType(Question.Type.valueOf(req.getType())); // must match enum
-    q.setChoix(req.getChoix());
-    q.setCorrect(req.getCorrect());
+    q.setType(Question.Type.valueOf(dto.getType()));
+    q.setTitre(dto.getTitre());
+    q.setChoix(dto.getChoix());
+    q.setCorrect(dto.getCorrect());
 
     examen.addQuestion(q);
-    examenRepository.save(examen); // cascades question
+    examenRepository.save(examen);
 
     return new QuestionDTO(q);
 }

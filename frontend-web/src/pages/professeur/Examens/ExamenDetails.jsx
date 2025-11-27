@@ -16,27 +16,51 @@ export default function ExamenDetails({ pages }) {
     reponseCorrecte: "",
   });
 
-  // TODO: Replace this with actual API call
-    useEffect(() => {
-        fetch(`http://localhost:8080/api/examens/${id}/details`)
-            .then(res => res.json())
-            .then(data => {
-            setExam(data);
-            setQuestions(data.questions || []);
-        });
-    }, [id]);
+  /** 🔥 Load Exam + Questions */
+  useEffect(() => {
+    fetch(`http://localhost:8080/api/examens/${id}/details`)
+      .then((res) => res.json())
+      .then((data) => {
+        setExam(data);
+        setQuestions(data.questions || []);
+      });
+  }, [id]);
 
+  /** 🔥 Add question one by one (POST request) */
+  const handleAddQuestion = async () => {
+    if (!questionForm.contenu || !questionForm.reponseCorrecte) {
+      alert("Fill all fields.");
+      return;
+    }
 
-  const handleAddQuestion = () => {
-    if (!questionForm.contenu) return;
-    setQuestions([...questions, { ...questionForm }]);
-    setQuestionForm({ type: "CHOICE", contenu: "", options: [], reponseCorrecte: "" });
+    const payload = {
+      type: questionForm.type,
+      contenu: questionForm.contenu,
+      options: questionForm.options,
+      reponseCorrecte: questionForm.reponseCorrecte,
+    };
+
+    await fetch(`http://localhost:8080/api/examens/${id}/questions`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+    // Refresh list
+    setQuestions([...questions, payload]);
+
+    setQuestionForm({
+      type: "CHOICE",
+      contenu: "",
+      options: [],
+      reponseCorrecte: "",
+    });
   };
 
+  /** Remove from frontend list (not deleting in backend) */
   const handleDelete = (index) => {
-    const newList = [...questions];
-    newList.splice(index, 1);
-    setQuestions(newList);
+    const updated = questions.filter((_, i) => i !== index);
+    setQuestions(updated);
   };
 
   if (!exam) return <p>Loading...</p>;
@@ -47,10 +71,14 @@ export default function ExamenDetails({ pages }) {
       <div className="flex flex-col flex-1 w-full min-h-screen">
         <Header />
         <main className="flex-1 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
-          <h1 className="text-2xl font-bold text-gray-800 mb-4">{exam.titre}</h1>
+          <h1 className="text-2xl font-bold text-gray-800 mb-4">
+            {exam.titre}
+          </h1>
+
+          <p className="text-gray-600 mb-4">{exam.description}</p>
 
           <div className="border-t mt-4 pt-4">
-            <h3 className="text-lg font-semibold mb-2">Questions</h3>
+            <h3 className="text-lg font-semibold mb-2">Add Question</h3>
 
             <div className="space-y-2">
               <input
@@ -67,7 +95,10 @@ export default function ExamenDetails({ pages }) {
                 placeholder="Options (comma separated)"
                 value={questionForm.options.join(",")}
                 onChange={(e) =>
-                  setQuestionForm({ ...questionForm, options: e.target.value.split(",") })
+                  setQuestionForm({
+                    ...questionForm,
+                    options: e.target.value.split(","),
+                  })
                 }
                 className="w-full border px-3 py-2 rounded"
               />
@@ -76,10 +107,14 @@ export default function ExamenDetails({ pages }) {
                 placeholder="Correct Answer"
                 value={questionForm.reponseCorrecte}
                 onChange={(e) =>
-                  setQuestionForm({ ...questionForm, reponseCorrecte: e.target.value })
+                  setQuestionForm({
+                    ...questionForm,
+                    reponseCorrecte: e.target.value,
+                  })
                 }
                 className="w-full border px-3 py-2 rounded"
               />
+
               <button
                 onClick={handleAddQuestion}
                 className="flex items-center gap-1 bg-green-600 text-white px-4 py-2 rounded"
@@ -98,9 +133,13 @@ export default function ExamenDetails({ pages }) {
                     <div>
                       <p className="font-medium">{q.contenu}</p>
                       <p className="text-sm text-gray-500">
-                        Options: {q.options.join(", ")} | Correct: {q.reponseCorrecte}
+                        Options: {q.options} |
+                        <span className="ml-1">
+                          Correct: {q.reponseCorrecte}
+                        </span>
                       </p>
                     </div>
+
                     <button
                       onClick={() => handleDelete(index)}
                       className="text-red-600 hover:underline"

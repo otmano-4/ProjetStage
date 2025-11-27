@@ -42,6 +42,25 @@ export const createExamFun = createAsyncThunk(
   }
 );
 
+// Create a question for an exam
+export const createQuestionFun = createAsyncThunk(
+  "examens/createQuestionFun",
+  async ({ examId, question }, { rejectWithValue }) => {
+    try {
+      const res = await axios.post(
+        `http://localhost:8080/api/examens/${examId}/questions`,
+        question
+      );
+      return { examId, question: res.data };
+    } catch (err) {
+      return rejectWithValue(
+        err.response?.data || "Erreur lors de l'ajout de la question"
+      );
+    }
+  }
+);
+
+
 const examSlice = createSlice({
   name: "examens",
   initialState: {
@@ -90,6 +109,26 @@ const examSlice = createSlice({
         state.list.push(action.payload);
       })
       .addCase(createExamFun.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+
+
+      .addCase(createQuestionFun.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(createQuestionFun.fulfilled, (state, action) => {
+        state.loading = false;
+
+        // Find the exam in the list
+        const exam = state.list.find(e => e.id === action.payload.examId);
+        if (exam) {
+          if (!exam.questions) exam.questions = [];
+          exam.questions.push(action.payload.question);
+        }
+      })
+      .addCase(createQuestionFun.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
       });
