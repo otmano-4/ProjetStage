@@ -3,6 +3,7 @@ import { FileText, Clock, AlertCircle, CheckCircle } from "lucide-react";
 import Aside from "../../../components/Layouts/Aside";
 import Header from "../../../components/Layouts/Header";
 import { useSelector } from "react-redux";
+import { Link } from "react-router-dom";
 
 export default function Examens({ pages }) {
   const { list: examens, loading, error } = useSelector((state) => state.examens);
@@ -35,9 +36,9 @@ export default function Examens({ pages }) {
 
           {/* Exam list */}
           <ul className="grid sm:grid-cols-2 lg:grid-cols-2 gap-6">
-            {examens.map((e, index) => (
+            {examens.map((e) => (
               <li
-                key={index}
+                key={e.id}
                 className="border border-green-100 bg-white rounded-2xl shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300 p-6"
               >
                 <h2 className="text-xl font-semibold text-gray-800 mb-2">{e.titre}</h2>
@@ -45,6 +46,14 @@ export default function Examens({ pages }) {
                 <div className="flex items-center gap-2 text-green-600 font-medium">
                   <Clock size={18} />
                   <span>Durée : {e.duree} min</span>
+                </div>
+                <div className="mt-4">
+                  <Link
+                    to={`/etudiant/exams/${e.id}`}
+                    className="inline-flex items-center gap-2 text-sm text-blue-600 hover:underline font-medium"
+                  >
+                    Accéder à l'examen
+                  </Link>
                 </div>
               </li>
             ))}

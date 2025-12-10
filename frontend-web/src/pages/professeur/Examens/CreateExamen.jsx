@@ -14,6 +14,8 @@ function CreateExamen({ setShowModal, classes }) {
     classeId: 0,
     professeurId: user?.id || null,
     afficher: true,
+    dateDebut: "", // Format: YYYY-MM-DDTHH:mm
+    dateFin: "",   // Format: YYYY-MM-DDTHH:mm
   });
 
   const handleChange = (e) => {
@@ -33,8 +35,24 @@ function CreateExamen({ setShowModal, classes }) {
   const handleSubmit = (e) => {
     e.preventDefault();
 
-    console.log(newExam)
-    dispatch(createExamFun(newExam)).then(() => {
+    // Convertir les dates au format attendu par Spring Boot
+    // datetime-local donne "YYYY-MM-DDTHH:mm" en heure locale
+    // Spring Boot attend "YYYY-MM-DDTHH:mm:ss" ou "YYYY-MM-DD HH:mm:ss"
+    const convertLocalDateTime = (localDateTimeString) => {
+      if (!localDateTimeString) return null;
+      // datetime-local format: "YYYY-MM-DDTHH:mm"
+      // On ajoute ":00" pour les secondes
+      return localDateTimeString + ":00";
+    };
+
+    const examData = {
+      ...newExam,
+      dateDebut: convertLocalDateTime(newExam.dateDebut),
+      dateFin: convertLocalDateTime(newExam.dateFin),
+    };
+
+    console.log(examData);
+    dispatch(createExamFun(examData)).then(() => {
       dispatch(fetchExamens());
       setShowModal(false);
     });
@@ -119,6 +137,40 @@ function CreateExamen({ setShowModal, classes }) {
 
           </div>
 
+          {/* DATE DE DÉBUT */}
+          <div>
+            <label className="block text-gray-700 text-sm mb-1">
+              Date et heure de début
+            </label>
+            <input
+              type="datetime-local"
+              name="dateDebut"
+              value={newExam.dateDebut}
+              onChange={handleChange}
+              className="w-full border rounded-lg px-3 py-2"
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              L'examen sera visible à partir de cette date/heure
+            </p>
+          </div>
+
+          {/* DATE DE FIN */}
+          <div>
+            <label className="block text-gray-700 text-sm mb-1">
+              Date et heure de fin
+            </label>
+            <input
+              type="datetime-local"
+              name="dateFin"
+              value={newExam.dateFin}
+              onChange={handleChange}
+              className="w-full border rounded-lg px-3 py-2"
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              L'examen sera bloqué après cette date/heure
+            </p>
+          </div>
+
           {/* VISIBILITÉ */}
           <div className="flex items-center gap-2">
             <input
@@ -129,7 +181,7 @@ function CreateExamen({ setShowModal, classes }) {
               className="w-4 h-4 accent-blue-600"
             />
             <label className="text-sm text-gray-700">
-              Visible to students
+              Publier l'examen (visible aux étudiants dans la période définie)
             </label>
           </div>
 

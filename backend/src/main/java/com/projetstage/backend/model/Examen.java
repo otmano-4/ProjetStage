@@ -27,6 +27,9 @@ public class Examen {
     private boolean afficher;
 
     private LocalDateTime datePublication;
+    
+    private LocalDateTime dateDebut; // Date/heure de début de l'examen
+    private LocalDateTime dateFin;   // Date/heure de fin de l'examen
 
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "professeur_id", nullable = false)
@@ -131,6 +134,22 @@ public class Examen {
     public void addQuestion(Question q) {
         questions.add(q);
         q.setExamen(this);
+    }
+
+    public LocalDateTime getDateDebut() {
+        return dateDebut;
+    }
+
+    public void setDateDebut(LocalDateTime dateDebut) {
+        this.dateDebut = dateDebut;
+    }
+
+    public LocalDateTime getDateFin() {
+        return dateFin;
+    }
+
+    public void setDateFin(LocalDateTime dateFin) {
+        this.dateFin = dateFin;
     }
 }
 

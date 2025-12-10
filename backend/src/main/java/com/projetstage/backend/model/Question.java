@@ -10,6 +10,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import jakarta.persistence.Column;
 
 @Entity
 @Table(name = "questions")
@@ -19,7 +20,15 @@ public class Question {
 
     private String titre;
 
+    // Barème (score max) pour la question
+    private Double bareme = 1.0;
+
+    // Compatibilité avec la colonne existante en base
+    @Column(name = "contenu")
+    private String contenu;
+
     @Enumerated(EnumType.STRING)
+    @Column(length = 20)
     private Type type;
 
     private String choix; // JSON string or comma-separated
@@ -37,6 +46,14 @@ public class Question {
 
     public String getTitre() {
         return titre;
+    }
+
+    public Double getBareme() {
+        return bareme;
+    }
+
+    public String getContenu() {
+        return contenu;
     }
 
     public Type getType() {
@@ -61,6 +78,14 @@ public class Question {
 
     public void setTitre(String titre) {
         this.titre = titre;
+    }
+
+    public void setBareme(Double bareme) {
+        this.bareme = bareme;
+    }
+
+    public void setContenu(String contenu) {
+        this.contenu = contenu;
     }
     
     public void setType(Type valueOf) {

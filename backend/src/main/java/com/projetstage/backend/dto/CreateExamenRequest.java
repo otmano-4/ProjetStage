@@ -1,5 +1,7 @@
 package com.projetstage.backend.dto;
 
+import java.time.LocalDateTime;
+
 public class CreateExamenRequest {
     private String titre;
     private String description;
@@ -7,6 +9,8 @@ public class CreateExamenRequest {
     private boolean afficher;
     private Long classeId;
     private Long professeurId;
+    private LocalDateTime dateDebut; // Date/heure de début de l'examen
+    private LocalDateTime dateFin;   // Date/heure de fin de l'examen
 
     public String getTitre() { return titre; }
     public void setTitre(String titre) { this.titre = titre; }
@@ -25,4 +29,10 @@ public class CreateExamenRequest {
 
     public Long getProfesseurId() { return professeurId; }
     public void setProfesseurId(Long professeurId) { this.professeurId = professeurId; }
+
+    public LocalDateTime getDateDebut() { return dateDebut; }
+    public void setDateDebut(LocalDateTime dateDebut) { this.dateDebut = dateDebut; }
+
+    public LocalDateTime getDateFin() { return dateFin; }
+    public void setDateFin(LocalDateTime dateFin) { this.dateFin = dateFin; }
 }

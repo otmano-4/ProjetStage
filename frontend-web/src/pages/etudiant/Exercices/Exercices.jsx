@@ -11,15 +11,20 @@ export default function Exercices({pages}) {
   const utilisateur = {}
 
   useEffect(() => {
-    axios.get("http://localhost:8080/api/exercices/classe/1")
-      .then(res => {
-        console.log("✅ exercices reçus :", res.data);
-        setexercices(res.data);
-      })
-      .catch(err => {
-        console.error("❌ Erreur :", err);
-        setError("Impossible de charger les exercices");
-      });
+    // Note: Cette fonctionnalité n'est pas encore implémentée dans le backend
+    // L'endpoint /api/exercices n'existe pas encore
+    // Pour l'instant, on affiche un message informatif
+    setError("La fonctionnalité Exercices n'est pas encore disponible.");
+    // TODO: Implémenter l'endpoint /api/exercices dans le backend
+    // axios.get("http://localhost:8080/api/exercices/classe/1")
+    //   .then(res => {
+    //     console.log("✅ exercices reçus :", res.data);
+    //     setexercices(res.data);
+    //   })
+    //   .catch(err => {
+    //     console.error("❌ Erreur :", err);
+    //     setError("Impossible de charger les exercices");
+    //   });
   }, []);
 
   return (
@@ -78,13 +83,30 @@ export default function Exercices({pages}) {
 
         <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
         <div className="p-6">
-          <h1 className="text-2xl font-bold mb-4">📘 Exercice de la classe</h1>
+          <h1 className="text-2xl font-bold mb-4">📘 Exercices de la classe</h1>
 
-          {error && <p className="text-red-500">{error}</p>}
+          {error && (
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
+              <p className="text-yellow-800">{error}</p>
+            </div>
+          )}
 
-          <ul>
-            
-          </ul>
+          {exercices.length === 0 && !error && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <p className="text-blue-800">Aucun exercice disponible pour le moment.</p>
+            </div>
+          )}
+
+          {exercices.length > 0 && (
+            <ul className="space-y-4">
+              {exercices.map((exercice, index) => (
+                <li key={index} className="bg-white border rounded-lg p-4 shadow-sm">
+                  <h3 className="font-semibold text-gray-800">{exercice.titre || `Exercice ${index + 1}`}</h3>
+                  <p className="text-gray-600 text-sm mt-1">{exercice.description || "Aucune description"}</p>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
         </main>
       </div>

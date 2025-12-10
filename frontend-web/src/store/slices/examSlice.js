@@ -1,12 +1,25 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import axios from "axios";
 
-// Fetch examens visibles
+// Fetch examens visibles (pour étudiants - filtrés par dates)
 export const fetchExamens = createAsyncThunk(
   "examens/fetchExamens",
   async (_, { rejectWithValue }) => {
     try {
       const res = await axios.get("http://localhost:8080/api/examens/afficher");
+      return res.data;
+    } catch (err) {
+      return rejectWithValue(err.response?.data || "Erreur lors du chargement des examens");
+    }
+  }
+);
+
+// Fetch tous les examens (pour professeurs/admins - sans filtre de dates)
+export const fetchAllExamens = createAsyncThunk(
+  "examens/fetchAllExamens",
+  async (_, { rejectWithValue }) => {
+    try {
+      const res = await axios.get("http://localhost:8080/api/examens");
       return res.data;
     } catch (err) {
       return rejectWithValue(err.response?.data || "Erreur lors du chargement des examens");
@@ -95,6 +108,20 @@ const examSlice = createSlice({
         state.list = action.payload;
       })
       .addCase(fetchExamens.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+
+      // fetch all examens (pour professeurs)
+      .addCase(fetchAllExamens.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(fetchAllExamens.fulfilled, (state, action) => {
+        state.loading = false;
+        state.list = action.payload;
+      })
+      .addCase(fetchAllExamens.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
       })

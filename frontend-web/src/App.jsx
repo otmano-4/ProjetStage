@@ -8,6 +8,7 @@ import Dashboard from "./components/Pages/Dashboard";
 
 // 🧩 Pages Étudiant
 import ExamensEtudiant from "./pages/etudiant/Examen/Examens";
+import ExamenDetailsEtudiant from "./pages/etudiant/Examen/ExamenDetails";
 import ExercicesEtudiant from "./pages/etudiant/Exercices/Exercices";
 
 // 🧩 Pages Professeur
@@ -112,7 +113,10 @@ function App() {
 
         <Route element={<ProtectedRoute allowedRoles={["ETUDIANT"]} />}>
           <Route path="/etudiant/dashboard" element={<Dashboard pages={etudiantPages} />} />
-          <Route path="/etudiant/exams" element={<ExamensEtudiant pages={etudiantPages} />} />
+          <Route path="/etudiant/exams">
+            <Route index element={<ExamensEtudiant pages={etudiantPages} />} />
+            <Route path=":id" element={<ExamenDetailsEtudiant pages={etudiantPages} />} />
+          </Route>
           <Route path="/etudiant/exercices" element={<ExercicesEtudiant pages={etudiantPages} />} />
         </Route>
 

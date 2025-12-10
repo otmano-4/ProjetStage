@@ -1,15 +1,26 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Aside from "../../../components/Layouts/Aside";
 import Header from "../../../components/Layouts/Header";
 import { PlusCircle, FileText } from "lucide-react";
-import { useSelector } from "react-redux";
+import { useSelector, useDispatch } from "react-redux";
 import CreateExamen from "./CreateExamen";
 import { Link } from "react-router-dom";
+import { fetchAllExamens } from "../../../store/slices/examSlice";
+import { fetchClassesByProfesseur } from "../../../store/slices/classSlice";
 
 export default function ProfExamens({ pages }) {
+  const dispatch = useDispatch();
   const { list: examens } = useSelector((state) => state.examens);
   const { data: classes } = useSelector((state) => state.classes);
+  const user = useSelector((state) => state.auth.user);
   const [showModal, setShowModal] = useState(false);
+
+  useEffect(() => {
+    dispatch(fetchAllExamens()); // Utiliser fetchAllExamens pour voir tous les examens
+    if (user?.id) {
+      dispatch(fetchClassesByProfesseur(user.id));
+    }
+  }, [dispatch, user?.id]);
 
   return (
     <div className="flex min-h-screen bg-gray-100">

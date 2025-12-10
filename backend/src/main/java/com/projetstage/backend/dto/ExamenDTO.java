@@ -10,6 +10,8 @@ public class ExamenDTO {
     private int duree;
     private boolean afficher;
     private LocalDateTime datePublication;
+    private LocalDateTime dateDebut; // Date/heure de début de l'examen
+    private LocalDateTime dateFin;   // Date/heure de fin de l'examen
     private String professeurNom;
 
     // Constructeur qui prend un Examen et simplifie
@@ -20,6 +22,8 @@ public class ExamenDTO {
         this.duree = examen.getDuree();
         this.afficher = examen.isAfficher();
         this.datePublication = examen.getDatePublication();
+        this.dateDebut = examen.getDateDebut();
+        this.dateFin = examen.getDateFin();
         this.professeurNom = examen.getProfesseur().getNom();
     }
 
@@ -59,4 +63,10 @@ public class ExamenDTO {
     public void setDescription(String description) {
         this.description = description;
     }
+
+    public LocalDateTime getDateDebut() { return dateDebut; }
+    public void setDateDebut(LocalDateTime dateDebut) { this.dateDebut = dateDebut; }
+
+    public LocalDateTime getDateFin() { return dateFin; }
+    public void setDateFin(LocalDateTime dateFin) { this.dateFin = dateFin; }
 }
