@@ -3,21 +3,22 @@ import Aside from "../../../components/Layouts/Aside";
 import Header from "../../../components/Layouts/Header";
 import { PlusCircle, FileText } from "lucide-react";
 import { useSelector, useDispatch } from "react-redux";
-import CreateExamen from "./CreateExamen";
+import { useNavigate } from "react-router-dom";
 import { Link } from "react-router-dom";
-import { fetchAllExamens } from "../../../store/slices/examSlice";
+import { fetchExamensByProfesseur } from "../../../store/slices/examSlice";
 import { fetchClassesByProfesseur } from "../../../store/slices/classSlice";
 
 export default function ProfExamens({ pages }) {
+  const navigate = useNavigate();
   const dispatch = useDispatch();
   const { list: examens } = useSelector((state) => state.examens);
   const { data: classes } = useSelector((state) => state.classes);
   const user = useSelector((state) => state.auth.user);
-  const [showModal, setShowModal] = useState(false);
 
   useEffect(() => {
-    dispatch(fetchAllExamens()); // Utiliser fetchAllExamens pour voir tous les examens
+    // Utiliser fetchExamensByProfesseur pour ne voir que les examens du professeur connecté
     if (user?.id) {
+      dispatch(fetchExamensByProfesseur(user.id));
       dispatch(fetchClassesByProfesseur(user.id));
     }
   }, [dispatch, user?.id]);
@@ -30,13 +31,22 @@ export default function ProfExamens({ pages }) {
         <main className="flex-1 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8">
             <h1 className="text-2xl font-bold text-gray-800">Manage Exams</h1>
-            <button
-              onClick={() => setShowModal(true)}
-              className="mt-4 sm:mt-0 flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl shadow-sm transition"
-            >
-              <PlusCircle className="w-5 h-5" />
-              <span>Create Exam</span>
-            </button>
+            <div className="mt-4 sm:mt-0 flex items-center gap-3">
+              <button
+                onClick={() => navigate("/professeur/soumissions")}
+                className="flex items-center gap-2 bg-gray-600 hover:bg-gray-700 text-white px-5 py-2.5 rounded-xl shadow-sm transition"
+              >
+                <FileText className="w-5 h-5" />
+                <span>Soumissions</span>
+              </button>
+              <button
+                onClick={() => navigate("/professeur/exams/create")}
+                className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl shadow-sm transition"
+              >
+                <PlusCircle className="w-5 h-5" />
+                <span>Create Exam</span>
+              </button>
+            </div>
           </div>
 
           {examens.length === 0 ? (
@@ -68,7 +78,6 @@ export default function ProfExamens({ pages }) {
         </main>
       </div>
 
-      {showModal && <CreateExamen setShowModal={setShowModal} classes={classes} />}
     </div>
   );
 }

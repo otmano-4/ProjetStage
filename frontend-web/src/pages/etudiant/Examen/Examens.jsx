@@ -1,14 +1,33 @@
 import { FileText, Clock, AlertCircle, CheckCircle } from "lucide-react";
-
+import { useEffect } from "react";
+import { useDispatch } from "react-redux";
 import Aside from "../../../components/Layouts/Aside";
 import Header from "../../../components/Layouts/Header";
 import { useSelector } from "react-redux";
 import { Link } from "react-router-dom";
+import { fetchExamensByClasse } from "../../../store/slices/examSlice";
 
 export default function Examens({ pages }) {
+  const dispatch = useDispatch();
   const { list: examens, loading, error } = useSelector((state) => state.examens);
+  const user = useSelector((state) => state.auth.user);
 
   const historique = [1, 2, 3, 4, 5, 6];
+
+  // Rafraîchissement automatique pour détecter les examens qui deviennent disponibles
+  useEffect(() => {
+    if (!user?.classeId) return;
+
+    // Charger immédiatement
+    dispatch(fetchExamensByClasse(user.classeId));
+
+    // Vérifier toutes les 10 secondes si de nouveaux examens sont disponibles
+    const interval = setInterval(() => {
+      dispatch(fetchExamensByClasse(user.classeId));
+    }, 10000); // Toutes les 10 secondes
+
+    return () => clearInterval(interval);
+  }, [dispatch, user?.classeId]);
 
   return (
     <div className="flex min-h-screen bg-gray-50">

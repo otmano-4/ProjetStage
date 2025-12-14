@@ -27,6 +27,19 @@ export const fetchAllExamens = createAsyncThunk(
   }
 );
 
+// Fetch examens par professeur ID
+export const fetchExamensByProfesseur = createAsyncThunk(
+  "examens/fetchExamensByProfesseur",
+  async (professeurId, { rejectWithValue }) => {
+    try {
+      const res = await axios.get(`http://localhost:8080/api/examens/professeur/${professeurId}`);
+      return res.data;
+    } catch (err) {
+      return rejectWithValue(err.response?.data || "Erreur lors du chargement des examens du professeur");
+    }
+  }
+);
+
 // Fetch examens par classe ID
 export const fetchExamensByClasse = createAsyncThunk(
   "examens/fetchExamensByClasse",
@@ -122,6 +135,20 @@ const examSlice = createSlice({
         state.list = action.payload;
       })
       .addCase(fetchAllExamens.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+
+      // fetch examens par professeur
+      .addCase(fetchExamensByProfesseur.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(fetchExamensByProfesseur.fulfilled, (state, action) => {
+        state.loading = false;
+        state.list = action.payload;
+      })
+      .addCase(fetchExamensByProfesseur.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
       })

@@ -20,6 +20,7 @@ import com.projetstage.backend.dto.CorrectionDTO;
 import com.projetstage.backend.dto.SoumissionExamenDTO;
 
 import org.springframework.web.bind.annotation.*;
+import org.springframework.dao.DataIntegrityViolationException;
 
 import java.util.List;
 import java.time.LocalDateTime;
@@ -57,41 +58,117 @@ public class ExamenController {
 
     // Méthode utilitaire pour gérer les doublons : retourne la soumission la plus récente
     private SoumissionExamen getOrCreateSoumission(Long examId, Long etudiantId, Examen examen, Utilisateur etudiant) {
+        // Essayer de récupérer les soumissions existantes
         List<SoumissionExamen> soumissions = soumissionExamenRepository.findByExamenIdAndEtudiantId(examId, etudiantId);
         
-        if (soumissions.isEmpty()) {
-            // Créer une nouvelle soumission
-            SoumissionExamen s = new SoumissionExamen();
-            s.setExamen(examen);
-            s.setEtudiant(etudiant);
-            s.setStatut(SoumissionExamen.Statut.EN_COURS);
-            s.setCreatedAt(LocalDateTime.now());
-            return soumissionExamenRepository.save(s);
-        }
-        
-        // Si plusieurs soumissions existent, prendre la plus récente
-        // Supprimer les anciennes si nécessaire (optionnel, pour nettoyer)
-        SoumissionExamen soumission = soumissions.stream()
-                .sorted((s1, s2) -> {
-                    if (s1.getCreatedAt() == null && s2.getCreatedAt() == null) return 0;
-                    if (s1.getCreatedAt() == null) return 1;
-                    if (s2.getCreatedAt() == null) return -1;
-                    return s2.getCreatedAt().compareTo(s1.getCreatedAt());
-                })
-                .findFirst()
-                .orElse(soumissions.get(0));
-        
-        // Supprimer les doublons (garder seulement la plus récente)
-        if (soumissions.size() > 1) {
-            for (int i = 1; i < soumissions.size(); i++) {
-                SoumissionExamen duplicate = soumissions.get(i);
-                if (!duplicate.getId().equals(soumission.getId())) {
-                    soumissionExamenRepository.delete(duplicate);
+        if (!soumissions.isEmpty()) {
+            // Si des soumissions existent, prendre la plus récente
+            SoumissionExamen soumission = soumissions.stream()
+                    .sorted((s1, s2) -> {
+                        if (s1.getCreatedAt() == null && s2.getCreatedAt() == null) return 0;
+                        if (s1.getCreatedAt() == null) return 1;
+                        if (s2.getCreatedAt() == null) return -1;
+                        return s2.getCreatedAt().compareTo(s1.getCreatedAt());
+                    })
+                    .findFirst()
+                    .orElse(soumissions.get(0));
+            
+            // Supprimer les doublons (garder seulement la plus récente)
+            if (soumissions.size() > 1) {
+                for (int i = 1; i < soumissions.size(); i++) {
+                    SoumissionExamen duplicate = soumissions.get(i);
+                    if (!duplicate.getId().equals(soumission.getId())) {
+                        try {
+                            soumissionExamenRepository.delete(duplicate);
+                        } catch (Exception e) {
+                            // Ignorer les erreurs de suppression (peut-être déjà supprimé)
+                            System.err.println("Erreur lors de la suppression d'un doublon: " + e.getMessage());
+                        }
+                    }
                 }
             }
+            
+            return soumission;
         }
         
-        return soumission;
+        // Aucune soumission trouvée, essayer d'en créer une nouvelle
+        try {
+            SoumissionExamen nouvelleSoumission = new SoumissionExamen();
+            nouvelleSoumission.setExamen(examen);
+            nouvelleSoumission.setEtudiant(etudiant);
+            nouvelleSoumission.setStatut(SoumissionExamen.Statut.EN_COURS);
+            nouvelleSoumission.setCreatedAt(LocalDateTime.now());
+            SoumissionExamen saved = soumissionExamenRepository.save(nouvelleSoumission);
+            // Vérifier que l'entité sauvegardée a un ID valide
+            if (saved.getId() != null) {
+                return saved;
+            } else {
+                // Si pas d'ID, réessayer de récupérer depuis la base
+                soumissions = soumissionExamenRepository.findByExamenIdAndEtudiantId(examId, etudiantId);
+                if (!soumissions.isEmpty()) {
+                    return soumissions.get(0);
+                }
+                throw new RuntimeException("La soumission n'a pas été sauvegardée correctement (pas d'ID)");
+            }
+        } catch (DataIntegrityViolationException e) {
+            // Si une contrainte unique est violée, cela signifie qu'une soumission existe déjà
+            // (peut-être créée entre-temps par une autre transaction ou condition de course)
+            // Réessayer de récupérer la soumission existante
+            System.err.println("Contrainte unique violée, récupération de la soumission existante: " + e.getMessage());
+            // Réessayer plusieurs fois avec un petit délai pour gérer les conditions de course
+            for (int i = 0; i < 3; i++) {
+                try {
+                    Thread.sleep(50); // Petit délai pour laisser le temps à l'autre transaction de se terminer
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                }
+                soumissions = soumissionExamenRepository.findByExamenIdAndEtudiantId(examId, etudiantId);
+                if (!soumissions.isEmpty()) {
+                    return soumissions.stream()
+                            .sorted((s1, s2) -> {
+                                if (s1.getCreatedAt() == null && s2.getCreatedAt() == null) return 0;
+                                if (s1.getCreatedAt() == null) return 1;
+                                if (s2.getCreatedAt() == null) return -1;
+                                return s2.getCreatedAt().compareTo(s1.getCreatedAt());
+                            })
+                            .findFirst()
+                            .orElse(soumissions.get(0));
+                }
+            }
+            // Si toujours aucune soumission trouvée, relancer l'exception
+            throw new RuntimeException("Impossible de créer ou récupérer la soumission après plusieurs tentatives: " + e.getMessage(), e);
+        } catch (RuntimeException e) {
+            // Vérifier si l'exception contient une erreur de contrainte unique
+            String errorMessage = e.getMessage();
+            if (errorMessage != null && (errorMessage.contains("Duplicate entry") || 
+                                         errorMessage.contains("unique_examen_etudiant") ||
+                                         errorMessage.contains("constraint"))) {
+                // C'est probablement une erreur de contrainte unique, réessayer de récupérer
+                System.err.println("Erreur de contrainte unique détectée, récupération de la soumission existante: " + errorMessage);
+                // Réessayer plusieurs fois avec un petit délai
+                for (int i = 0; i < 3; i++) {
+                    try {
+                        Thread.sleep(50);
+                    } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                    }
+                    soumissions = soumissionExamenRepository.findByExamenIdAndEtudiantId(examId, etudiantId);
+                    if (!soumissions.isEmpty()) {
+                        return soumissions.stream()
+                                .sorted((s1, s2) -> {
+                                    if (s1.getCreatedAt() == null && s2.getCreatedAt() == null) return 0;
+                                    if (s1.getCreatedAt() == null) return 1;
+                                    if (s2.getCreatedAt() == null) return -1;
+                                    return s2.getCreatedAt().compareTo(s1.getCreatedAt());
+                                })
+                                .findFirst()
+                                .orElse(soumissions.get(0));
+                    }
+                }
+            }
+            // Si ce n'est pas une erreur de contrainte unique, relancer l'exception
+            throw e;
+        }
     }
 
     @GetMapping
@@ -135,6 +212,8 @@ public class ExamenController {
 
     @GetMapping("/classe/{classeId}")
     public List<ExamenDTO> getByClasse(@PathVariable Long classeId) {
+        // Les examens restent visibles même après expiration pour permettre la consultation des résultats
+        // On filtre uniquement par afficher=true et dateDebut
         LocalDateTime maintenant = LocalDateTime.now();
         return examenRepository.findByClasseId(classeId)
                 .stream()
@@ -142,11 +221,10 @@ public class ExamenController {
                     // L'examen est visible si :
                     // 1. Il est marqué comme afficher
                     // 2. La date de début est passée ou nulle
-                    // 3. La date de fin n'est pas encore passée ou nulle
+                    // On ne filtre plus par dateFin pour permettre la consultation après expiration
                     if (!examen.isAfficher()) return false;
                     boolean debutOk = examen.getDateDebut() == null || !maintenant.isBefore(examen.getDateDebut());
-                    boolean finOk = examen.getDateFin() == null || !maintenant.isAfter(examen.getDateFin());
-                    return debutOk && finOk;
+                    return debutOk;
                 })
                 .map(ExamenDTO::new)
                 .toList();
@@ -163,7 +241,17 @@ public class ExamenController {
         Examen examen = new Examen();
         examen.setTitre(request.getTitre());
         examen.setDescription(request.getDescription());
-        examen.setDuree(request.getDuree());
+        
+        // Calculer automatiquement la durée si dateDebut et dateFin sont définies
+        int duree = request.getDuree();
+        if (request.getDateDebut() != null && request.getDateFin() != null) {
+            long minutes = java.time.Duration.between(request.getDateDebut(), request.getDateFin()).toMinutes();
+            if (minutes > 0) {
+                duree = (int) minutes;
+            }
+        }
+        examen.setDuree(duree);
+        
         examen.setAfficher(request.isAfficher());
         examen.setDatePublication(LocalDateTime.now());
         examen.setDateDebut(request.getDateDebut());
@@ -455,6 +543,7 @@ public ExamenDetailsQuestionsDTO getExamWithQuestions(@PathVariable Long id) {
                 throw new RuntimeException("L'examen n'a pas encore commencé. Date de début : " + examen.getDateDebut());
             }
             
+            // Bloquer l'accès après dateFin - l'étudiant ne peut plus démarrer ou continuer l'examen
             if (examen.getDateFin() != null && maintenant.isAfter(examen.getDateFin())) {
                 throw new RuntimeException("L'examen est terminé. Date de fin : " + examen.getDateFin());
             }
@@ -463,6 +552,17 @@ public ExamenDetailsQuestionsDTO getExamWithQuestions(@PathVariable Long id) {
                     .orElseThrow(() -> new RuntimeException("Étudiant non trouvé"));
 
             SoumissionExamen soumission = getOrCreateSoumission(examId, etudiantId, examen, etudiant);
+            
+            // Vérifier que la soumission a un ID valide
+            if (soumission.getId() == null) {
+                // Si pas d'ID, réessayer de récupérer depuis la base
+                List<SoumissionExamen> soumissions = soumissionExamenRepository.findByExamenIdAndEtudiantId(examId, etudiantId);
+                if (!soumissions.isEmpty()) {
+                    soumission = soumissions.get(0);
+                } else {
+                    throw new RuntimeException("Impossible de récupérer une soumission valide (pas d'ID)");
+                }
+            }
 
             // Si l'examen n'a pas encore commencé, initialiser startedAt
             if (soumission.getStartedAt() == null) {
@@ -697,6 +797,60 @@ public ExamenDetailsQuestionsDTO getExamWithQuestions(@PathVariable Long id) {
         return new SoumissionExamenDTO(soum);
     }
 
+    // Forcer la soumission d'un examen EN_COURS (pour le professeur)
+    @PostMapping("/soumissions/{soumissionId}/forcer-soumission")
+    @Transactional
+    public SoumissionExamenDTO forcerSoumission(@PathVariable Long soumissionId) {
+        SoumissionExamen soum = soumissionExamenRepository.findById(soumissionId)
+                .orElseThrow(() -> new RuntimeException("Soumission non trouvée"));
+
+        if (soum.getStatut() != SoumissionExamen.Statut.EN_COURS) {
+            throw new RuntimeException("Seules les soumissions EN_COURS peuvent être forcées");
+        }
+
+        // Récupérer l'examen et les réponses
+        Examen examen = soum.getExamen();
+        List<Reponse> reponses = reponseRepository.findBySoumissionIdWithRelations(soumissionId);
+        
+        // Calculer les scores auto
+        double scoreAuto = 0.0;
+        double totalAutoMax = 0.0;
+        boolean hasTextToCorrect = false;
+
+        for (Reponse rep : reponses) {
+            Question q = rep.getQuestion();
+            if (q.getType() == Question.Type.MULTIPLE || q.getType() == Question.Type.TRUE_FALSE) {
+                totalAutoMax += q.getBareme() != null ? q.getBareme() : 0.0;
+                if (rep.getReponse() != null && q.getCorrect() != null) {
+                    String reponseNorm = rep.getReponse().trim().toLowerCase();
+                    String correctNorm = q.getCorrect().trim().toLowerCase();
+                    if (reponseNorm.equals(correctNorm)) {
+                        scoreAuto += q.getBareme() != null ? q.getBareme() : 0.0;
+                        rep.setNote(q.getBareme() != null ? q.getBareme() : 0.0);
+                        rep.setStatut(Reponse.Statut.AUTO_CORRIGE);
+                    } else {
+                        rep.setNote(0.0);
+                        rep.setStatut(Reponse.Statut.AUTO_CORRIGE);
+                    }
+                    reponseRepository.save(rep);
+                }
+            } else if (q.getType() == Question.Type.TEXT) {
+                hasTextToCorrect = true;
+                rep.setStatut(Reponse.Statut.A_CORRIGER);
+                reponseRepository.save(rep);
+            }
+        }
+
+        soum.setScoreAuto(scoreAuto);
+        soum.setScoreManuel(0.0);
+        soum.setScoreTotal(scoreAuto);
+        soum.setStatut(hasTextToCorrect ? SoumissionExamen.Statut.SOUMIS : SoumissionExamen.Statut.CORRIGE);
+        soum.setSubmittedAt(LocalDateTime.now());
+        soumissionExamenRepository.save(soum);
+
+        return new SoumissionExamenDTO(soum);
+    }
+
     // Publication des résultats
     @PostMapping("/soumissions/{soumissionId}/publier")
     @Transactional
@@ -712,6 +866,32 @@ public ExamenDetailsQuestionsDTO getExamWithQuestions(@PathVariable Long id) {
         soum.setPublishedAt(LocalDateTime.now());
         soumissionExamenRepository.save(soum);
         return new SoumissionExamenDTO(soum);
+    }
+
+    // Supprimer un examen et toutes ses données associées
+    @DeleteMapping("/{examId}")
+    @Transactional
+    public Map<String, Object> deleteExamen(@PathVariable Long examId) {
+        Examen examen = examenRepository.findById(examId)
+                .orElseThrow(() -> new RuntimeException("Examen non trouvé"));
+
+        // Supprimer toutes les réponses associées à cet examen
+        List<Reponse> reponses = reponseRepository.findAll().stream()
+                .filter(r -> r.getExamen() != null && r.getExamen().getId().equals(examId))
+                .collect(Collectors.toList());
+        reponseRepository.deleteAll(reponses);
+
+        // Supprimer toutes les soumissions associées à cet examen
+        List<SoumissionExamen> soumissions = soumissionExamenRepository.findByExamenId(examId);
+        soumissionExamenRepository.deleteAll(soumissions);
+
+        // Supprimer l'examen (les questions seront supprimées en cascade grâce à orphanRemoval = true)
+        examenRepository.delete(examen);
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", true);
+        response.put("message", "Examen supprimé avec succès");
+        return response;
     }
 
 }

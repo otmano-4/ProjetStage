@@ -24,6 +24,8 @@ export default function ExamenDetailsEtudiant({ pages }) {
   const questionsRef = useRef([]);
   const answersRef = useRef({});
   const errorCountRef = useRef(0);
+  const pollingIntervalRef = useRef(null); // Ref pour stocker l'intervalle de polling
+  const soumissionPollingIntervalRef = useRef(null); // Ref pour le polling de soumission
 
   const user = useSelector((state) => state.auth.user);
   
@@ -48,15 +50,16 @@ export default function ExamenDetailsEtudiant({ pages }) {
         return res.json();
       })
       .then((data) => {
-        setExam(data);
-        setQuestions(data.questions || []);
-        setError("");
+        // Vérifier d'abord si l'examen est dans la période autorisée
+        let examenExpire = false;
+        let examenPasCommence = false;
         
-        // Vérifier si l'examen est dans la période autorisée
         if (data.dateDebut) {
           const dateDebut = new Date(data.dateDebut);
           if (new Date() < dateDebut) {
             setError(`L'examen n'a pas encore commencé. Date de début : ${dateDebut.toLocaleString('fr-FR')}`);
+            examenPasCommence = true;
+            setLoading(false);
             return;
           }
         }
@@ -64,76 +67,306 @@ export default function ExamenDetailsEtudiant({ pages }) {
         if (data.dateFin) {
           const dateFin = new Date(data.dateFin);
           if (new Date() > dateFin) {
-            setError(`L'examen est terminé. Date de fin : ${dateFin.toLocaleString('fr-FR')}`);
+            // L'examen est expiré - permettre la consultation en lecture seule
+            examenExpire = true;
             setTempsEcoule(true);
-            return;
+            setTempsRestant(0);
+          }
+        }
+        
+        setExam(data);
+        setQuestions(data.questions || []);
+        setError("");
+        
+        // Charger la soumission existante (même si l'examen est expiré, pour voir les résultats)
+        if (user?.id) {
+          // Charger la soumission d'abord
+          fetch(`http://localhost:8080/api/examens/${id}/soumissions/me?etudiantId=${user.id}`)
+            .then((res) => res.json())
+            .then((data) => {
+              if (data.soumission) {
+                setSoumission(data.soumission);
+                setReponses(data.reponses || []);
+                const ans = {};
+                (data.reponses || []).forEach((r) => {
+                  ans[r.questionId] = r.reponse;
+                });
+                setAnswers(ans);
+                if (data.soumission.tempsRestantSecondes !== null && data.soumission.tempsRestantSecondes !== undefined) {
+                  setTempsRestant(data.soumission.tempsRestantSecondes);
+                  setTempsEcoule(data.soumission.tempsRestantSecondes <= 0 || examenExpire);
+                }
+              }
+            })
+            .catch(() => {});
+          
+          // Démarrer l'examen SEULEMENT si l'examen n'est pas expiré
+          if (!examenExpire) {
+            fetch(`http://localhost:8080/api/examens/${id}/start?etudiantId=${user.id}`, {
+              method: "POST",
+            })
+              .then((res) => {
+                if (!res.ok) {
+                  return res.text().then(text => {
+                    // Si l'erreur indique que l'examen est terminé, ne pas bloquer l'accès
+                    if (text.includes("terminé") || text.includes("Date de fin")) {
+                      setTempsEcoule(true);
+                      setTempsRestant(0);
+                      setExamenCommence(false);
+                      return null; // Retourner null au lieu de undefined
+                    }
+                    throw new Error(text || "Erreur lors du démarrage");
+                  });
+                }
+                return res.json();
+              })
+              .then((data) => {
+                // Vérifier que data existe avant d'accéder à ses propriétés
+                if (data) {
+                  setExamenCommence(true);
+                  if (data.tempsEcoule) {
+                    setTempsEcoule(true);
+                    setTempsRestant(0);
+                  }
+                }
+              })
+              .catch((err) => {
+                // Ne pas bloquer l'accès si l'erreur concerne l'expiration
+                if (!err.message || (!err.message.includes("terminé") && !err.message.includes("Date de fin"))) {
+                  setError(err.message || "Impossible de démarrer l'examen");
+                }
+                setTempsEcoule(true);
+                setExamenCommence(false);
+              });
+          } else {
+            // Si l'examen est expiré, on peut quand même afficher les résultats
+            setExamenCommence(false);
           }
         }
       })
       .catch(() => setError("Impossible de charger l'examen"))
       .finally(() => setLoading(false));
+  }, [id, user?.id]);
 
-    // Charger soumission existante et démarrer l'examen
-    if (user?.id) {
-      // Démarrer l'examen (initialise startedAt si pas déjà fait)
-      fetch(`http://localhost:8080/api/examens/${id}/start?etudiantId=${user.id}`, {
-        method: "POST",
-      })
-        .then((res) => res.json())
-        .then((data) => {
-          setExamenCommence(true);
-          if (data.tempsEcoule) {
-            setTempsEcoule(true);
-            setTempsRestant(0);
-          }
-        })
-        .catch(() => {});
-
-      // Charger la soumission
+  // Recharger la soumission périodiquement pour voir les résultats publiés
+  useEffect(() => {
+    if (!user?.id || !id || !exam) return; // Attendre que exam soit chargé
+    
+    // Nettoyer l'ancien intervalle s'il existe
+    if (soumissionPollingIntervalRef.current) {
+      clearInterval(soumissionPollingIntervalRef.current);
+      soumissionPollingIntervalRef.current = null;
+    }
+    
+    // Arrêter complètement le polling si l'examen est expiré
+    if (exam.dateFin && new Date() > new Date(exam.dateFin)) {
+      return; // Ne pas démarrer le polling pour un examen expiré
+    }
+    
+    // Vérifier si la soumission est déjà finalisée avant de démarrer le polling
+    const currentSoumission = soumissionRef.current;
+    if (currentSoumission && currentSoumission.statut !== "EN_COURS") {
+      return; // Ne pas démarrer le polling si déjà finalisée
+    }
+    
+    // Ne démarrer le polling que si l'examen n'est pas expiré ET que la soumission est EN_COURS
+    const interval = setInterval(() => {
+      // Vérifier si l'examen est expiré avant chaque requête
+      if (exam?.dateFin && new Date() > new Date(exam.dateFin)) {
+        clearInterval(interval);
+        soumissionPollingIntervalRef.current = null;
+        return;
+      }
+      
+      // Arrêter si la soumission est finalisée (PUBLIE, CORRIGE, SOUMIS)
+      const currentSoumission = soumissionRef.current;
+      if (currentSoumission && currentSoumission.statut !== "EN_COURS") {
+        clearInterval(interval);
+        soumissionPollingIntervalRef.current = null;
+        return;
+      }
+      
+      // Ne faire la requête que si nécessaire
       fetch(`http://localhost:8080/api/examens/${id}/soumissions/me?etudiantId=${user.id}`)
-        .then((res) => res.json())
+        .then((res) => {
+          if (!res.ok) return null;
+          return res.json();
+        })
         .then((data) => {
+          if (!data) return;
+          
           if (data.soumission) {
-            setSoumission(data.soumission);
-            setReponses(data.reponses || []);
-            const ans = {};
-            (data.reponses || []).forEach((r) => {
-              ans[r.questionId] = r.reponse;
-            });
-            setAnswers(ans);
-            if (data.soumission.tempsRestantSecondes !== null && data.soumission.tempsRestantSecondes !== undefined) {
-              setTempsRestant(data.soumission.tempsRestantSecondes);
-              setTempsEcoule(data.soumission.tempsRestantSecondes <= 0);
+            const currentSoumission = soumissionRef.current;
+            // Mettre à jour la soumission si elle a changé (par exemple, publiée)
+            if (!currentSoumission || data.soumission.statut !== currentSoumission.statut || 
+                data.soumission.id !== currentSoumission.id) {
+              setSoumission(data.soumission);
+              setReponses(data.reponses || []);
+              const ans = {};
+              (data.reponses || []).forEach((r) => {
+                ans[r.questionId] = r.reponse;
+              });
+              setAnswers(ans);
+              soumissionRef.current = data.soumission;
+              
+              // Arrêter le polling si la soumission est finalisée
+              if (data.soumission.statut !== "EN_COURS") {
+                clearInterval(interval);
+                soumissionPollingIntervalRef.current = null;
+              }
             }
           }
         })
-        .catch(() => {});
-    }
-  }, [id, user?.id]);
+        .catch(() => {
+          // Ignorer les erreurs silencieusement
+        });
+    }, 15000); // Augmenter à 15 secondes pour réduire encore la charge
+
+    soumissionPollingIntervalRef.current = interval;
+
+    return () => {
+      if (soumissionPollingIntervalRef.current) {
+        clearInterval(soumissionPollingIntervalRef.current);
+        soumissionPollingIntervalRef.current = null;
+      }
+    };
+  }, [id, user?.id, exam?.id]); // Retirer exam?.dateFin pour éviter les re-créations
+
+  // Vérifier périodiquement si l'examen est expiré (dateFin)
+  useEffect(() => {
+    if (!exam || !exam.dateFin) return;
+    
+    // Si déjà expiré, ne pas créer d'intervalle
+    if (tempsEcoule) return;
+
+    const checkExpiration = () => {
+      const dateFin = new Date(exam.dateFin);
+      const maintenant = new Date();
+      
+      if (maintenant > dateFin) {
+        // L'examen est expiré - bloquer l'accès
+        setTempsEcoule(true);
+        setTempsRestant(0);
+        
+        // Arrêter tous les polling
+        if (pollingIntervalRef.current) {
+          clearInterval(pollingIntervalRef.current);
+          pollingIntervalRef.current = null;
+        }
+        if (soumissionPollingIntervalRef.current) {
+          clearInterval(soumissionPollingIntervalRef.current);
+          soumissionPollingIntervalRef.current = null;
+        }
+        
+        // Si la soumission est encore EN_COURS, forcer la soumission automatique
+        if (soumissionRef.current && soumissionRef.current.statut === "EN_COURS") {
+          handleAutoSubmit();
+        }
+      }
+    };
+
+    // Vérifier immédiatement
+    checkExpiration();
+
+    // Vérifier toutes les 10 secondes (pas besoin de vérifier plus souvent)
+    const interval = setInterval(checkExpiration, 10000);
+
+    return () => clearInterval(interval);
+  }, [exam?.dateFin]); // Retirer tempsEcoule des dépendances pour éviter les re-créations
+
+  // Nettoyage au démontage du composant
+  useEffect(() => {
+    return () => {
+      // Nettoyer tous les intervalles au démontage
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+        pollingIntervalRef.current = null;
+      }
+      if (soumissionPollingIntervalRef.current) {
+        clearInterval(soumissionPollingIntervalRef.current);
+        soumissionPollingIntervalRef.current = null;
+      }
+    };
+  }, []);
 
   // Mettre à jour le temps restant toutes les secondes
   useEffect(() => {
-    // Arrêter le polling si l'examen n'a pas commencé, pas d'utilisateur, temps écoulé, ou soumission finalisée
-    if (!examenCommence || !user?.id || tempsEcoule) return;
+    // Arrêter le polling si l'examen n'a pas commencé, pas d'utilisateur, temps écoulé
+    if (!examenCommence || !user?.id || tempsEcoule) {
+      // Nettoyer l'intervalle si nécessaire
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+        pollingIntervalRef.current = null;
+      }
+      return;
+    }
+    
+    // Vérifier si l'examen est expiré par dateFin
+    if (exam?.dateFin && new Date() > new Date(exam.dateFin)) {
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+        pollingIntervalRef.current = null;
+      }
+      return;
+    }
     
     // Vérifier si la soumission est encore EN_COURS
     if (soumissionRef.current && soumissionRef.current.statut !== "EN_COURS") {
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+        pollingIntervalRef.current = null;
+      }
       return;
+    }
+
+    // Nettoyer l'ancien intervalle s'il existe
+    if (pollingIntervalRef.current) {
+      clearInterval(pollingIntervalRef.current);
+      pollingIntervalRef.current = null;
     }
 
     const interval = setInterval(() => {
       // Vérifier à nouveau avant chaque requête
-      if (soumissionRef.current && soumissionRef.current.statut !== "EN_COURS") {
+      const currentSoumission = soumissionRef.current;
+      if (currentSoumission && currentSoumission.statut !== "EN_COURS") {
         clearInterval(interval);
+        pollingIntervalRef.current = null;
         return;
+      }
+      
+      // Vérifier aussi si l'examen est expiré par dateFin
+      if (exam?.dateFin) {
+        const dateFin = new Date(exam.dateFin);
+        if (new Date() > dateFin) {
+          setTempsEcoule(true);
+          setTempsRestant(0);
+          clearInterval(interval);
+          pollingIntervalRef.current = null;
+          if (currentSoumission && currentSoumission.statut === "EN_COURS") {
+            handleAutoSubmit();
+          }
+          return;
+        }
       }
       
       fetch(`http://localhost:8080/api/examens/${id}/soumissions/me/time?etudiantId=${user.id}`)
         .then((res) => {
-          if (!res.ok) throw new Error("Erreur réseau");
+          if (!res.ok) {
+            // Si l'erreur indique que l'examen est terminé, arrêter le polling
+            if (res.status === 500) {
+              clearInterval(interval);
+              pollingIntervalRef.current = null;
+              setTempsEcoule(true);
+              setTempsRestant(0);
+            }
+            throw new Error("Erreur réseau");
+          }
           return res.json();
         })
         .then((data) => {
+          // Vérifier que data existe
+          if (!data) return;
+          
           // Réinitialiser le compteur d'erreurs en cas de succès
           errorCountRef.current = 0;
           
@@ -143,6 +376,7 @@ export default function ExamenDetailsEtudiant({ pages }) {
               setTempsEcoule(true);
               setTempsRestant(0);
               clearInterval(interval);
+              pollingIntervalRef.current = null;
               
               // Soumettre automatiquement si le temps est écoulé et que la soumission est EN_COURS
               const currentSoumission = soumissionRef.current;
@@ -158,13 +392,21 @@ export default function ExamenDetailsEtudiant({ pages }) {
           if (errorCountRef.current >= 3) {
             console.error("Arrêt du polling : trop d'erreurs de connexion au backend");
             clearInterval(interval);
+            pollingIntervalRef.current = null;
             setError("Impossible de se connecter au serveur. Vérifiez que le backend est démarré.");
           }
         });
-    }, 1000); // Mise à jour toutes les secondes
+    }, 3000); // Augmenter à 3 secondes pour réduire encore la charge
 
-    return () => clearInterval(interval);
-  }, [examenCommence, user?.id, id, tempsEcoule]); // Dépendances réduites
+    pollingIntervalRef.current = interval;
+
+    return () => {
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+        pollingIntervalRef.current = null;
+      }
+    };
+  }, [examenCommence, user?.id, id]); // Réduire les dépendances pour éviter les re-créations fréquentes
 
   // Fonction pour soumettre automatiquement
   const handleAutoSubmit = async () => {
@@ -209,6 +451,15 @@ export default function ExamenDetailsEtudiant({ pages }) {
       alert("Le temps est écoulé. Vous ne pouvez plus modifier vos réponses.");
       return;
     }
+    // Vérifier aussi si l'examen est expiré par dateFin
+    if (exam?.dateFin) {
+      const dateFin = new Date(exam.dateFin);
+      if (new Date() > dateFin) {
+        alert("L'examen est terminé. Vous ne pouvez plus modifier vos réponses.");
+        setTempsEcoule(true);
+        return;
+      }
+    }
     setAnswers((prev) => ({ ...prev, [questionId]: value }));
   };
 
@@ -220,6 +471,18 @@ export default function ExamenDetailsEtudiant({ pages }) {
     if (soumission && soumission.statut !== "EN_COURS") {
       alert("Soumission déjà finalisée");
       return;
+    }
+    if (tempsEcoule) {
+      alert("Le temps est écoulé. Vous ne pouvez plus sauvegarder.");
+      return;
+    }
+    // Vérifier aussi si l'examen est expiré par dateFin
+    if (exam?.dateFin) {
+      const dateFin = new Date(exam.dateFin);
+      if (new Date() > dateFin) {
+        alert("L'examen est terminé. Vous ne pouvez plus sauvegarder.");
+        return;
+      }
     }
     const payload = {
       etudiantId: user.id,
@@ -255,6 +518,15 @@ export default function ExamenDetailsEtudiant({ pages }) {
     if (tempsEcoule && !soumission) {
       alert("Le temps est écoulé. Vous ne pouvez plus soumettre.");
       return;
+    }
+    // Vérifier aussi si l'examen est expiré par dateFin
+    if (exam?.dateFin) {
+      const dateFin = new Date(exam.dateFin);
+      if (new Date() > dateFin) {
+        alert("L'examen est terminé. Vous ne pouvez plus soumettre.");
+        setTempsEcoule(true);
+        return;
+      }
     }
     
     // Désactiver le formulaire pendant la soumission
@@ -324,20 +596,26 @@ export default function ExamenDetailsEtudiant({ pages }) {
                 <p className="text-sm text-gray-500 mt-1">
                   Durée : {exam.duree} min
                 </p>
+                {exam?.dateFin && new Date() > new Date(exam.dateFin) && (
+                  <div className="mt-3 bg-orange-50 border border-orange-200 rounded-lg p-3">
+                    <p className="text-orange-800 text-sm font-medium">
+                      ⚠️ L'examen est terminé. Vous pouvez consulter vos réponses et résultats en lecture seule.
+                    </p>
+                    <p className="text-orange-700 text-xs mt-1">
+                      Date de fin : {new Date(exam.dateFin).toLocaleString('fr-FR')}
+                    </p>
+                  </div>
+                )}
               </div>
-              {examenCommence && tempsRestant !== null && soumission?.statut === "EN_COURS" && (
+              {examenCommence && tempsRestant !== null && soumission?.statut === "EN_COURS" && !tempsEcoule && exam?.dateFin && new Date() <= new Date(exam.dateFin) && (
                 <div className={`px-4 py-2 rounded-lg font-bold text-lg ${
                   tempsRestant <= 60 ? "bg-red-100 text-red-800" :
                   tempsRestant <= 300 ? "bg-yellow-100 text-yellow-800" :
                   "bg-blue-100 text-blue-800"
                 }`}>
-                  {tempsEcoule ? (
-                    <span>Temps écoulé</span>
-                  ) : (
-                    <span>
-                      {Math.floor(tempsRestant / 60)}:{(tempsRestant % 60).toString().padStart(2, '0')}
-                    </span>
-                  )}
+                  <span>
+                    {Math.floor(tempsRestant / 60)}:{(tempsRestant % 60).toString().padStart(2, '0')}
+                  </span>
                 </div>
               )}
             </div>
@@ -429,9 +707,13 @@ export default function ExamenDetailsEtudiant({ pages }) {
                                 isPublished && isCorrectOption ? "bg-green-100 border border-green-300" :
                                 isPublished && isSelected && !isCorrectOption ? "bg-red-100 border border-red-300" :
                                 "bg-gray-50"
-                              } ${soumission && soumission.statut === "EN_COURS" ? "cursor-pointer" : ""}`}
+                              } ${(soumission && soumission.statut === "EN_COURS" && !tempsEcoule) ? "cursor-pointer" : "cursor-not-allowed opacity-60"}`}
                               onClick={() => {
                                 if (soumission && soumission.statut !== "EN_COURS") return;
+                                if (tempsEcoule) {
+                                  alert("Le temps est écoulé. Vous ne pouvez plus modifier vos réponses.");
+                                  return;
+                                }
                                 handleChange(q.id, opt);
                               }}
                             >
@@ -440,7 +722,7 @@ export default function ExamenDetailsEtudiant({ pages }) {
                                 name={`q-${q.id}`}
                                 checked={isSelected}
                                 onChange={() => handleChange(q.id, opt)}
-                                disabled={soumission && soumission.statut !== "EN_COURS"}
+                                disabled={(soumission && soumission.statut !== "EN_COURS") || tempsEcoule}
                               />
                               <span className="text-gray-500">{String.fromCharCode(65 + i)}.</span>
                               <span>{opt}</span>
@@ -460,7 +742,7 @@ export default function ExamenDetailsEtudiant({ pages }) {
                           placeholder="Ta réponse..."
                           value={answers[q.id] || ""}
                           onChange={(e) => handleChange(q.id, e.target.value)}
-                          disabled={soumission && soumission.statut !== "EN_COURS"}
+                          disabled={(soumission && soumission.statut !== "EN_COURS") || tempsEcoule}
                         />
                         {isPublished && reponseData && reponseData.note !== null && (
                           <p className="mt-2 text-sm text-gray-600">

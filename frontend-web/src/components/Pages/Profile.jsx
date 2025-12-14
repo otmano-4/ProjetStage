@@ -14,7 +14,7 @@ function Profile({pages}) {
 
             console.log("change pass");
 
-            const res = await axios.put(`http://localhost:8080/api/users/update-password`, {
+            const res = await axios.put(`http://localhost:8080/api/utilisateurs/update-password`, {
                 id: user?.id,
                 newpassword: newPassword
             });

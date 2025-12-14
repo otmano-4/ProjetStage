@@ -13,6 +13,8 @@ import ExercicesEtudiant from "./pages/etudiant/Exercices/Exercices";
 
 // 🧩 Pages Professeur
 import ProfExamens from "./pages/professeur/Examens/Examens";
+import CreateExamenPage from "./pages/professeur/Examens/CreateExamenPage";
+import Soumissions from "./pages/professeur/Examens/Soumissions";
 
 // 🧩 Pages Admin
 import Classe from "./pages/admin/Classes/Classe";
@@ -24,7 +26,7 @@ import Profile from "./components/Pages/Profile";
 import { useDispatch, useSelector } from 'react-redux'
 
 
-import {BookText, LayoutDashboard, Newspaper, Users} from 'lucide-react'
+import {BookText, LayoutDashboard, Newspaper, Users, FileText} from 'lucide-react'
 import { useEffect } from "react";
 import { fetchExamens, fetchExamensByClasse } from "./store/slices/examSlice";
 import { fetchClasses, fetchClassesByProfesseur } from "./store/slices/classSlice";
@@ -61,6 +63,11 @@ function App() {
       "title": "Exams",
       "link": "/professeur/exams",
       "icon": <Newspaper />
+    },
+    {
+      "title": "Soumissions",
+      "link": "/professeur/soumissions",
+      "icon": <FileText />
     }
   ]
 
@@ -124,8 +131,10 @@ function App() {
           <Route path="/professeur/dashboard" element={<Dashboard pages={profPages}  />} />
           <Route path="/professeur/exams">
             <Route index element={<ProfExamens pages={profPages} />} />
+            <Route path="create" element={<CreateExamenPage pages={profPages} />} />
             <Route path=":id" element={<ExamenDetails pages={profPages} />} />
           </Route>
+          <Route path="/professeur/soumissions" element={<Soumissions pages={profPages} />} />
         </Route>
 
         <Route element={<ProtectedRoute allowedRoles={["ADMIN"]} />}>

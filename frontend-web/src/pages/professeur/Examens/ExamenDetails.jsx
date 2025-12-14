@@ -202,150 +202,44 @@ export default function ExamenDetails({ pages }) {
       <div className="flex flex-col flex-1 w-full min-h-screen">
         <Header />
         <main className="flex-1 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
-          <h1 className="text-2xl font-bold text-gray-800 mb-4">
-            {exam.titre}
-          </h1>
-
-          <p className="text-gray-600 mb-4">{exam.description}</p>
-
-          <div className="border-t mt-4 pt-4">
-            <h3 className="text-lg font-semibold mb-2">Ajouter une question</h3>
-
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="space-y-2 sm:col-span-2">
-                <label className="text-sm text-gray-600">Type de question</label>
-                <select
-                  className="w-full border px-3 py-2 rounded bg-white"
-                  value={questionForm.type}
-                  onChange={(e) =>
-                    setQuestionForm({ ...questionForm, type: e.target.value })
-                  }
-                >
-                  <option value="MULTIPLE">QCM / Choix multiples</option>
-                  <option value="TEXT">Question ouverte</option>
-                  <option value="TRUE_FALSE">Vrai / Faux</option>
-                </select>
-              </div>
-
-              <div className="space-y-2 sm:col-span-2">
-                <label className="text-sm text-gray-600">Intitulé</label>
-                <input
-                  type="text"
-                  placeholder="Ex : Définissez le polymorphisme en POO"
-                  value={questionForm.titre}
-                  onChange={(e) =>
-                    setQuestionForm({ ...questionForm, titre: e.target.value })
-                  }
-                  className="w-full border px-3 py-2 rounded"
-                />
-              </div>
-
-
-              {questionForm.type !== "TEXT" && (
-                <div className="space-y-2 sm:col-span-2">
-                  <label className="text-sm text-gray-600">
-                    Options (séparées par des virgules)
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="Option A, Option B, Option C"
-                    value={questionForm.options}
-                    onChange={(e) =>
-                      setQuestionForm({ ...questionForm, options: e.target.value })
-                    }
-                    className="w-full border px-3 py-2 rounded"
-                  />
-                </div>
-              )}
-
-              <div className="space-y-2 sm:col-span-2">
-                <label className="text-sm text-gray-600">
-                  Réponse correcte (si plusieurs : séparez par des virgules)
-                </label>
-                <input
-                  type="text"
-                  placeholder="Ex : Option B"
-                  value={questionForm.correct}
-                  onChange={(e) =>
-                    setQuestionForm({ ...questionForm, correct: e.target.value })
-                  }
-                  className="w-full border px-3 py-2 rounded"
-                />
-              </div>
-
-              <div className="space-y-2 sm:col-span-2">
-                <label className="text-sm text-gray-600">Barème (points)</label>
-                <input
-                  type="number"
-                  placeholder="1.0"
-                  value={questionForm.bareme}
-                  onChange={(e) =>
-                    setQuestionForm({ ...questionForm, bareme: parseFloat(e.target.value) || 1.0 })
-                  }
-                  min="0.1"
-                  step="0.1"
-                  className="w-full border px-3 py-2 rounded"
-                />
-              </div>
-
-              <div className="sm:col-span-2">
-                <button
-                  onClick={handleAddQuestion}
-                  className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 transition"
-                >
-                  <PlusCircle className="w-4 h-4" /> Ajouter
-                </button>
-              </div>
+          <div className="flex justify-between items-start mb-4">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-800">
+                {exam.titre}
+              </h1>
+              <p className="text-gray-600 mt-2">{exam.description}</p>
             </div>
+            <button
+              onClick={async () => {
+                const confirmed = window.confirm(
+                  `Êtes-vous sûr de vouloir supprimer l'examen "${exam.titre}" ?\n\nCette action est irréversible et supprimera :\n- Toutes les soumissions des étudiants\n- Toutes les réponses\n- Toutes les questions\n- L'examen lui-même`
+                );
+                if (!confirmed) return;
 
-            {questions.length > 0 && (
-              <ul className="mt-6 space-y-2">
-                {questions.map((q, index) => {
-                  const optionsArray = (q.choix || "").split(",").filter(Boolean);
-                  const typeLabel =
-                    q.type === "TEXT"
-                      ? "Question ouverte"
-                      : q.type === "TRUE_FALSE"
-                      ? "Vrai/Faux"
-                      : "QCM / Choix multiples";
-
-                  return (
-                    <li
-                      key={q.id || index}
-                      className="flex justify-between items-start p-3 border rounded bg-white"
-                    >
-                      <div className="space-y-1">
-                        <p className="font-medium">{q.titre}</p>
-                        <p className="text-xs text-gray-500">{typeLabel}</p>
-                        {optionsArray.length > 0 && (
-                          <p className="text-sm text-gray-600">
-                            Options : {optionsArray.join(", ")}
-                          </p>
-                        )}
-                        <p className="text-sm text-green-700">
-                          Réponse : {q.correct}
-                        </p>
-                        <p className="text-sm text-blue-700">
-                          Barème : {q.bareme || 1} pts
-                        </p>
-                      </div>
-
-                      <button
-                        onClick={() =>
-                          setQuestions(questions.filter((_, i) => i !== index))
-                        }
-                        className="text-red-600 hover:underline"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
+                try {
+                  const res = await fetch(`http://localhost:8080/api/examens/${id}`, {
+                    method: "DELETE",
+                  });
+                  if (res.ok) {
+                    alert("Examen supprimé avec succès");
+                    window.location.href = "/professeur/exams";
+                  } else {
+                    const errorText = await res.text();
+                    alert(`Erreur lors de la suppression : ${errorText}`);
+                  }
+                } catch (err) {
+                  console.error("Erreur suppression:", err);
+                  alert("Erreur lors de la suppression de l'examen");
+                }
+              }}
+              className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+            >
+              <Trash2 className="w-4 h-4" />
+              Supprimer l'examen
+            </button>
           </div>
 
-          {/* Tableau des soumissions */}
+          {/* Section des soumissions - Priorité principale */}
           <div className="mt-8 border-t pt-4">
             <h3 className="text-lg font-semibold mb-4">Soumissions des étudiants</h3>
             {soumissions.length === 0 ? (
@@ -431,6 +325,43 @@ export default function ExamenDetails({ pages }) {
                   Détails de la soumission de {selectedSoumission.etudiantNom}
                 </h3>
                 <div className="flex gap-2">
+                  {selectedSoumission.statut === "EN_COURS" && (
+                    <button
+                      onClick={async () => {
+                        try {
+                          const res = await fetch(
+                            `http://localhost:8080/api/examens/soumissions/${selectedSoumission.id}/forcer-soumission`,
+                            { method: "POST", headers: { "Content-Type": "application/json" } }
+                          );
+                          if (!res.ok) {
+                            const text = await res.text();
+                            alert(`Erreur: ${text}`);
+                            return;
+                          }
+                          const updated = await res.json();
+                          setSoumissions((prev) =>
+                            prev.map((s) => (s.id === updated.id ? updated : s))
+                          );
+                          setSelectedSoumission(updated);
+                          // Recharger les réponses
+                          const repsRes = await fetch(
+                            `http://localhost:8080/api/examens/soumissions/${updated.id}/reponses`
+                          );
+                          if (repsRes.ok) {
+                            const reps = await repsRes.json();
+                            setReponsesSoumission(reps || []);
+                          }
+                          alert("Soumission forcée avec succès. L'examen est maintenant en statut SOUMIS ou CORRIGE.");
+                        } catch (e) {
+                          console.error(e);
+                          alert("Erreur lors de la soumission forcée");
+                        }
+                      }}
+                      className="bg-orange-600 text-white px-4 py-2 rounded hover:bg-orange-700"
+                    >
+                      Forcer la soumission
+                    </button>
+                  )}
                   {selectedSoumission.statut === "SOUMIS" && (
                     <button
                       onClick={async () => {
@@ -632,6 +563,149 @@ export default function ExamenDetails({ pages }) {
               </div>
             </div>
           )}
+
+          {/* Section pour ajouter des questions - Moins visible, en bas */}
+          <div className="border-t mt-8 pt-4">
+            <details className="group">
+              <summary className="cursor-pointer text-lg font-semibold mb-2 list-none flex items-center justify-between">
+                <span>Ajouter une question</span>
+                <span className="text-gray-400 group-open:rotate-180 transition-transform">▼</span>
+              </summary>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-2 sm:col-span-2">
+                <label className="text-sm text-gray-600">Type de question</label>
+                <select
+                  className="w-full border px-3 py-2 rounded bg-white"
+                  value={questionForm.type}
+                  onChange={(e) =>
+                    setQuestionForm({ ...questionForm, type: e.target.value })
+                  }
+                >
+                  <option value="MULTIPLE">QCM / Choix multiples</option>
+                  <option value="TEXT">Question ouverte</option>
+                  <option value="TRUE_FALSE">Vrai / Faux</option>
+                </select>
+              </div>
+
+              <div className="space-y-2 sm:col-span-2">
+                <label className="text-sm text-gray-600">Intitulé</label>
+                <input
+                  type="text"
+                  placeholder="Ex : Définissez le polymorphisme en POO"
+                  value={questionForm.titre}
+                  onChange={(e) =>
+                    setQuestionForm({ ...questionForm, titre: e.target.value })
+                  }
+                  className="w-full border px-3 py-2 rounded"
+                />
+              </div>
+
+
+              {questionForm.type !== "TEXT" && (
+                <div className="space-y-2 sm:col-span-2">
+                  <label className="text-sm text-gray-600">
+                    Options (séparées par des virgules)
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Option A, Option B, Option C"
+                    value={questionForm.options}
+                    onChange={(e) =>
+                      setQuestionForm({ ...questionForm, options: e.target.value })
+                    }
+                    className="w-full border px-3 py-2 rounded"
+                  />
+                </div>
+              )}
+
+              <div className="space-y-2 sm:col-span-2">
+                <label className="text-sm text-gray-600">
+                  Réponse correcte (si plusieurs : séparez par des virgules)
+                </label>
+                <input
+                  type="text"
+                  placeholder="Ex : Option B"
+                  value={questionForm.correct}
+                  onChange={(e) =>
+                    setQuestionForm({ ...questionForm, correct: e.target.value })
+                  }
+                  className="w-full border px-3 py-2 rounded"
+                />
+              </div>
+
+              <div className="space-y-2 sm:col-span-2">
+                <label className="text-sm text-gray-600">Barème (points)</label>
+                <input
+                  type="number"
+                  placeholder="1.0"
+                  value={questionForm.bareme}
+                  onChange={(e) =>
+                    setQuestionForm({ ...questionForm, bareme: parseFloat(e.target.value) || 1.0 })
+                  }
+                  min="0.1"
+                  step="0.1"
+                  className="w-full border px-3 py-2 rounded"
+                />
+              </div>
+
+              <div className="sm:col-span-2">
+                <button
+                  onClick={handleAddQuestion}
+                  className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 transition"
+                >
+                  <PlusCircle className="w-4 h-4" /> Ajouter
+                </button>
+              </div>
+            </div>
+
+            {questions.length > 0 && (
+              <ul className="mt-6 space-y-2">
+                {questions.map((q, index) => {
+                  const optionsArray = (q.choix || "").split(",").filter(Boolean);
+                  const typeLabel =
+                    q.type === "TEXT"
+                      ? "Question ouverte"
+                      : q.type === "TRUE_FALSE"
+                      ? "Vrai/Faux"
+                      : "QCM / Choix multiples";
+
+                  return (
+                    <li
+                      key={q.id || index}
+                      className="flex justify-between items-start p-3 border rounded bg-white"
+                    >
+                      <div className="space-y-1">
+                        <p className="font-medium">{q.titre}</p>
+                        <p className="text-xs text-gray-500">{typeLabel}</p>
+                        {optionsArray.length > 0 && (
+                          <p className="text-sm text-gray-600">
+                            Options : {optionsArray.join(", ")}
+                          </p>
+                        )}
+                        <p className="text-sm text-green-700">
+                          Réponse : {q.correct}
+                        </p>
+                        <p className="text-sm text-blue-700">
+                          Barème : {q.bareme || 1} pts
+                        </p>
+                      </div>
+
+                      <button
+                        onClick={() =>
+                          setQuestions(questions.filter((_, i) => i !== index))
+                        }
+                        className="text-red-600 hover:underline"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+            </details>
+          </div>
         </main>
       </div>
     </div>
