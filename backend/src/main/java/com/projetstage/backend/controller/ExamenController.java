@@ -33,6 +33,8 @@ import com.projetstage.backend.dto.ExamenDetailsQuestionsDTO;
 import com.projetstage.backend.model.Question;
 import com.projetstage.backend.model.Reponse;
 import com.projetstage.backend.model.SoumissionExamen;
+import com.projetstage.backend.model.Notification;
+import com.projetstage.backend.repository.NotificationRepository;
 import jakarta.transaction.Transactional;
 
 @RestController
@@ -45,15 +47,18 @@ public class ExamenController {
     private final UtilisateurRepository utilisateurRepository;
     private final ReponseRepository reponseRepository;
     private final com.projetstage.backend.repository.SoumissionExamenRepository soumissionExamenRepository;
+    private final NotificationRepository notificationRepository;
 
     public ExamenController(ExamenRepository examenRepository, ClasseRepository classRepository,
                             UtilisateurRepository utilisateurRepository, ReponseRepository reponseRepository,
-                            com.projetstage.backend.repository.SoumissionExamenRepository soumissionExamenRepository) {
+                            com.projetstage.backend.repository.SoumissionExamenRepository soumissionExamenRepository,
+                            NotificationRepository notificationRepository) {
         this.examenRepository = examenRepository;
         this.classRepository = classRepository;
         this.utilisateurRepository = utilisateurRepository;
         this.reponseRepository = reponseRepository;
         this.soumissionExamenRepository = soumissionExamenRepository;
+        this.notificationRepository = notificationRepository;
     }
 
     // Méthode utilitaire pour gérer les doublons : retourne la soumission la plus récente
@@ -231,11 +236,12 @@ public class ExamenController {
     }
 
     @PostMapping
+    @Transactional
     public ExamenDetailsDTO create(@RequestBody CreateExamenRequest request) {
         Utilisateur professeur = utilisateurRepository.findById(request.getProfesseurId())
             .orElseThrow(() -> new RuntimeException("Professeur not found"));
 
-        Classe classe = classRepository.findById(request.getClasseId())
+        Classe classe = classRepository.findByIdWithEtudiants(request.getClasseId())
             .orElseThrow(() -> new RuntimeException("Classe not found"));
 
         Examen examen = new Examen();
@@ -261,15 +267,29 @@ public class ExamenController {
 
         Examen saved = examenRepository.save(examen);
 
+        // Créer des notifications pour tous les étudiants de la classe
+        if (classe.getEtudiants() != null && !classe.getEtudiants().isEmpty()) {
+            String dateHeure = "";
+            if (saved.getDateDebut() != null) {
+                dateHeure = saved.getDateDebut().format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy à HH:mm"));
+            }
+            
+            for (Utilisateur etudiant : classe.getEtudiants()) {
+                Notification notification = new Notification();
+                notification.setUtilisateur(etudiant);
+                notification.setType(Notification.TypeNotification.EXAMEN_CREE);
+                notification.setTitre("Nouvel examen : " + saved.getTitre());
+                notification.setMessage("Un nouvel examen a été créé pour votre classe." + 
+                    (dateHeure.isEmpty() ? "" : " Date prévue : " + dateHeure));
+                notification.setExamenId(saved.getId());
+                notification.setDateCreation(LocalDateTime.now());
+                notificationRepository.save(notification);
+            }
+        }
+
         return new ExamenDetailsDTO(saved.getId(), saved.getTitre(), saved.getDescription(),
             saved.getDuree(), saved.isAfficher(), saved.getDatePublication(),
             saved.getProfesseur().getNom());
-    }
-
-
-    @DeleteMapping("/{id}")
-    public void delete(@PathVariable Long id) {
-        examenRepository.deleteById(id);
     }
 
 
@@ -865,6 +885,22 @@ public ExamenDetailsQuestionsDTO getExamWithQuestions(@PathVariable Long id) {
         soum.setStatut(SoumissionExamen.Statut.PUBLIE);
         soum.setPublishedAt(LocalDateTime.now());
         soumissionExamenRepository.save(soum);
+
+        // Créer une notification pour l'étudiant concerné
+        Utilisateur etudiant = soum.getEtudiant();
+        Examen examen = soum.getExamen();
+        if (etudiant != null && examen != null) {
+            Notification notification = new Notification();
+            notification.setUtilisateur(etudiant);
+            notification.setType(Notification.TypeNotification.RESULTATS_PUBLIES);
+            notification.setTitre("Résultats publiés : " + examen.getTitre());
+            notification.setMessage("Les résultats de l'examen \"" + examen.getTitre() + 
+                "\" ont été publiés. Vous pouvez maintenant consulter votre note et vos réponses.");
+            notification.setExamenId(examen.getId());
+            notification.setDateCreation(LocalDateTime.now());
+            notificationRepository.save(notification);
+        }
+
         return new SoumissionExamenDTO(soum);
     }
 

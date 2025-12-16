@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { useSelector } from 'react-redux';
 import { Link } from 'react-router-dom';
+import Notifications from '../Notifications/Notifications';
 
 function Header() {
     const user = useSelector((state) => state.auth.user);
@@ -19,13 +20,16 @@ function Header() {
                     Bienvenue <span className={`${user?.role == "ADMIN" && "text-yellow-500" || user?.role == "PROFESSEUR" && "text-blue-500" || user?.role == "ETUDIANT" && "text-green-500"}`}>{user.nom}</span>
                 </h1>
 
-                <button onClick={()=> setIsOpen(!isOpen)}>
-                <img
-                    src="https://i.pravatar.cc/40"
-                    alt="avatar"
-                    className="rounded-full w-10 h-10 border-2 border-blue-200"
-                />
-                </button>
+                <div className="flex items-center gap-4">
+                    {user?.role === "ETUDIANT" && <Notifications userId={user.id} />}
+                    <button onClick={()=> setIsOpen(!isOpen)}>
+                    <img
+                        src="https://i.pravatar.cc/40"
+                        alt="avatar"
+                        className="rounded-full w-10 h-10 border-2 border-blue-200"
+                    />
+                    </button>
+                </div>
             </header>
 
 

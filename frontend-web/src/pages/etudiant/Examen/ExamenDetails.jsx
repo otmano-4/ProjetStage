@@ -10,11 +10,13 @@ export default function ExamenDetailsEtudiant({ pages }) {
   const [questions, setQuestions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [errorType, setErrorType] = useState(null); // 'examen_pas_commence' | 'null_identifier' | null
   const [answers, setAnswers] = useState({});
   const [submitMsg, setSubmitMsg] = useState("");
   const [soumission, setSoumission] = useState(null);
   const [reponses, setReponses] = useState([]);
   const [saveMsg, setSaveMsg] = useState("");
+  const [autoSaveMsg, setAutoSaveMsg] = useState(""); // message pour la sauvegarde auto
   const [tempsRestant, setTempsRestant] = useState(null); // en secondes
   const [tempsEcoule, setTempsEcoule] = useState(false);
   const [examenCommence, setExamenCommence] = useState(false);
@@ -26,6 +28,7 @@ export default function ExamenDetailsEtudiant({ pages }) {
   const errorCountRef = useRef(0);
   const pollingIntervalRef = useRef(null); // Ref pour stocker l'intervalle de polling
   const soumissionPollingIntervalRef = useRef(null); // Ref pour le polling de soumission
+  const autoSaveTimeoutRef = useRef(null); // Ref pour le timer de sauvegarde automatique
 
   const user = useSelector((state) => state.auth.user);
   
@@ -57,6 +60,7 @@ export default function ExamenDetailsEtudiant({ pages }) {
         if (data.dateDebut) {
           const dateDebut = new Date(data.dateDebut);
           if (new Date() < dateDebut) {
+            setErrorType('examen_pas_commence');
             setError(`L'examen n'a pas encore commencé. Date de début : ${dateDebut.toLocaleString('fr-FR')}`);
             examenPasCommence = true;
             setLoading(false);
@@ -77,28 +81,28 @@ export default function ExamenDetailsEtudiant({ pages }) {
         setExam(data);
         setQuestions(data.questions || []);
         setError("");
-        
+
         // Charger la soumission existante (même si l'examen est expiré, pour voir les résultats)
         if (user?.id) {
           // Charger la soumission d'abord
-          fetch(`http://localhost:8080/api/examens/${id}/soumissions/me?etudiantId=${user.id}`)
-            .then((res) => res.json())
-            .then((data) => {
-              if (data.soumission) {
-                setSoumission(data.soumission);
-                setReponses(data.reponses || []);
-                const ans = {};
-                (data.reponses || []).forEach((r) => {
-                  ans[r.questionId] = r.reponse;
-                });
-                setAnswers(ans);
-                if (data.soumission.tempsRestantSecondes !== null && data.soumission.tempsRestantSecondes !== undefined) {
-                  setTempsRestant(data.soumission.tempsRestantSecondes);
+      fetch(`http://localhost:8080/api/examens/${id}/soumissions/me?etudiantId=${user.id}`)
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.soumission) {
+            setSoumission(data.soumission);
+            setReponses(data.reponses || []);
+            const ans = {};
+            (data.reponses || []).forEach((r) => {
+              ans[r.questionId] = r.reponse;
+            });
+            setAnswers(ans);
+            if (data.soumission.tempsRestantSecondes !== null && data.soumission.tempsRestantSecondes !== undefined) {
+              setTempsRestant(data.soumission.tempsRestantSecondes);
                   setTempsEcoule(data.soumission.tempsRestantSecondes <= 0 || examenExpire);
-                }
-              }
-            })
-            .catch(() => {});
+            }
+          }
+        })
+        .catch(() => {});
           
           // Démarrer l'examen SEULEMENT si l'examen n'est pas expiré
           if (!examenExpire) {
@@ -115,6 +119,26 @@ export default function ExamenDetailsEtudiant({ pages }) {
                       setExamenCommence(false);
                       return null; // Retourner null au lieu de undefined
                     }
+                    // Détecter si l'examen n'a pas encore commencé
+                    if (text.includes("pas encore commencé") || text.includes("n'a pas encore commencé")) {
+                      setErrorType('examen_pas_commence');
+                      // Extraire la date de début du message
+                      const dateMatch = text.match(/Date de début : (.+)/);
+                      if (dateMatch) {
+                        setError(`L'examen n'a pas encore commencé. Date de début : ${dateMatch[1]}`);
+                      } else {
+                        setError("L'examen n'a pas encore commencé");
+                      }
+                      setExamenCommence(false);
+                      return null;
+                    }
+                    // Détecter l'erreur null identifier
+                    if (text.includes("null identifier") || text.includes("has a null identifier")) {
+                      setErrorType('null_identifier');
+                      setError("Une erreur technique s'est produite. Veuillez actualiser la page.");
+                      setExamenCommence(false);
+                      return null;
+                    }
                     throw new Error(text || "Erreur lors du démarrage");
                   });
                 }
@@ -124,6 +148,7 @@ export default function ExamenDetailsEtudiant({ pages }) {
                 // Vérifier que data existe avant d'accéder à ses propriétés
                 if (data) {
                   setExamenCommence(true);
+                  setErrorType(null); // Réinitialiser le type d'erreur en cas de succès
                   if (data.tempsEcoule) {
                     setTempsEcoule(true);
                     setTempsRestant(0);
@@ -133,7 +158,22 @@ export default function ExamenDetailsEtudiant({ pages }) {
               .catch((err) => {
                 // Ne pas bloquer l'accès si l'erreur concerne l'expiration
                 if (!err.message || (!err.message.includes("terminé") && !err.message.includes("Date de fin"))) {
-                  setError(err.message || "Impossible de démarrer l'examen");
+                  // Vérifier le type d'erreur dans le message
+                  if (err.message && (err.message.includes("pas encore commencé") || err.message.includes("n'a pas encore commencé"))) {
+                    setErrorType('examen_pas_commence');
+                    const dateMatch = err.message.match(/Date de début : (.+)/);
+                    if (dateMatch) {
+                      setError(`L'examen n'a pas encore commencé. Date de début : ${dateMatch[1]}`);
+                    } else {
+                      setError("L'examen n'a pas encore commencé");
+                    }
+                  } else if (err.message && (err.message.includes("null identifier") || err.message.includes("has a null identifier"))) {
+                    setErrorType('null_identifier');
+                    setError("Une erreur technique s'est produite. Veuillez actualiser la page.");
+                  } else {
+                    setErrorType(null);
+                    setError(err.message || "Impossible de démarrer l'examen");
+                  }
                 }
                 setTempsEcoule(true);
                 setExamenCommence(false);
@@ -408,6 +448,21 @@ export default function ExamenDetailsEtudiant({ pages }) {
     };
   }, [examenCommence, user?.id, id]); // Réduire les dépendances pour éviter les re-créations fréquentes
 
+  // Nettoyage global au démontage (inclut l'auto-save)
+  useEffect(() => {
+    return () => {
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+      }
+      if (soumissionPollingIntervalRef.current) {
+        clearInterval(soumissionPollingIntervalRef.current);
+      }
+      if (autoSaveTimeoutRef.current) {
+        clearTimeout(autoSaveTimeoutRef.current);
+      }
+    };
+  }, []);
+
   // Fonction pour soumettre automatiquement
   const handleAutoSubmit = async () => {
     if (!user?.id) return;
@@ -445,6 +500,95 @@ export default function ExamenDetailsEtudiant({ pages }) {
     }
   };
 
+  // Fonction de sauvegarde (utilisée par le bouton et l'auto-save)
+  const saveBrouillonInternal = async (options = { isAuto: false }) => {
+    if (!user?.id) {
+      if (!options.isAuto) {
+        alert("Utilisateur non connecté");
+      }
+      return;
+    }
+    const currentSoumission = soumissionRef.current;
+    if (currentSoumission && currentSoumission.statut !== "EN_COURS") {
+      if (!options.isAuto) {
+        alert("Soumission déjà finalisée");
+      }
+      return;
+    }
+    if (tempsEcoule) {
+      if (!options.isAuto) {
+        alert("Le temps est écoulé. Vous ne pouvez plus sauvegarder.");
+      }
+      return;
+    }
+    // Vérifier aussi si l'examen est expiré par dateFin
+    if (exam?.dateFin) {
+      const dateFin = new Date(exam.dateFin);
+      if (new Date() > dateFin) {
+        if (!options.isAuto) {
+          alert("L'examen est terminé. Vous ne pouvez plus sauvegarder.");
+        }
+      return;
+    }
+    }
+
+    const currentQuestions = questionsRef.current || [];
+    const currentAnswers = answersRef.current || {};
+
+    const payload = {
+      etudiantId: user.id,
+      responses: currentQuestions.map((q) => ({
+        questionId: q.id,
+        reponse: currentAnswers[q.id] || "",
+      })),
+    };
+
+    try {
+      const res = await fetch(
+        `http://localhost:8080/api/examens/${id}/soumissions/brouillon`,
+        {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+        }
+      );
+      if (!res.ok) throw new Error("Erreur sauvegarde");
+
+      if (options.isAuto) {
+        setAutoSaveMsg("Brouillon enregistré automatiquement");
+        setTimeout(() => setAutoSaveMsg(""), 3000);
+      } else {
+      setSaveMsg("Brouillon sauvegardé");
+      setTimeout(() => setSaveMsg(""), 3000);
+      }
+    } catch (e) {
+      console.error(e);
+      if (!options.isAuto) {
+      alert("Impossible de sauvegarder le brouillon");
+    }
+    }
+  };
+
+  // Déclencheur de sauvegarde automatique (debounce)
+  const scheduleAutoSave = () => {
+    const currentSoumission = soumissionRef.current;
+    if (!user?.id) return;
+    if (tempsEcoule) return;
+    if (currentSoumission && currentSoumission.statut !== "EN_COURS") return;
+    if (exam?.dateFin) {
+      const dateFin = new Date(exam.dateFin);
+      if (new Date() > dateFin) return;
+    }
+    if (autoSaveTimeoutRef.current) {
+      clearTimeout(autoSaveTimeoutRef.current);
+    }
+    // Sauvegarde automatique après 2 secondes sans nouvelle saisie
+    autoSaveTimeoutRef.current = setTimeout(
+      () => saveBrouillonInternal({ isAuto: true }),
+      2000
+    );
+  };
+
   const handleChange = (questionId, value) => {
     if (soumission && soumission.statut !== "EN_COURS") return;
     if (tempsEcoule) {
@@ -461,49 +605,13 @@ export default function ExamenDetailsEtudiant({ pages }) {
       }
     }
     setAnswers((prev) => ({ ...prev, [questionId]: value }));
+    // Planifier une sauvegarde automatique du brouillon
+    scheduleAutoSave();
   };
 
   const handleSaveBrouillon = async () => {
-    if (!user?.id) {
-      alert("Utilisateur non connecté");
-      return;
-    }
-    if (soumission && soumission.statut !== "EN_COURS") {
-      alert("Soumission déjà finalisée");
-      return;
-    }
-    if (tempsEcoule) {
-      alert("Le temps est écoulé. Vous ne pouvez plus sauvegarder.");
-      return;
-    }
-    // Vérifier aussi si l'examen est expiré par dateFin
-    if (exam?.dateFin) {
-      const dateFin = new Date(exam.dateFin);
-      if (new Date() > dateFin) {
-        alert("L'examen est terminé. Vous ne pouvez plus sauvegarder.");
-        return;
-      }
-    }
-    const payload = {
-      etudiantId: user.id,
-      responses: questions.map((q) => ({
-        questionId: q.id,
-        reponse: answers[q.id] || "",
-      })),
-    };
-    try {
-      const res = await fetch(`http://localhost:8080/api/examens/${id}/soumissions/brouillon`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      if (!res.ok) throw new Error("Erreur sauvegarde");
-      setSaveMsg("Brouillon sauvegardé");
-      setTimeout(() => setSaveMsg(""), 3000);
-    } catch (e) {
-      console.error(e);
-      alert("Impossible de sauvegarder le brouillon");
-    }
+    // Sauvegarde manuelle (utilise la même logique que l'auto-save)
+    await saveBrouillonInternal({ isAuto: false });
   };
 
   const handleSubmit = async () => {
@@ -579,7 +687,90 @@ export default function ExamenDetailsEtudiant({ pages }) {
   };
 
   if (loading) return <p className="p-6">Chargement...</p>;
-  if (error) return <p className="p-6 text-red-600">{error}</p>;
+  
+  // Affichage des erreurs spécifiques
+  if (error && errorType === 'examen_pas_commence') {
+    return (
+      <div className="flex min-h-screen bg-gray-50">
+        <Aside pages={pages} />
+        <div className="flex flex-col flex-1">
+          <Header />
+          <main className="flex-1 max-w-6xl mx-auto px-6 py-10 w-full">
+            <div className="bg-blue-50 border-2 border-blue-300 rounded-xl p-8 shadow-lg max-w-2xl mx-auto mt-20">
+              <div className="text-center">
+                <div className="mb-4">
+                  <svg className="w-20 h-20 mx-auto text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <h2 className="text-2xl font-bold text-blue-900 mb-3">
+                  L'examen n'a pas encore commencé
+                </h2>
+                <p className="text-blue-700 text-lg mb-2">
+                  {error.replace("L'examen n'a pas encore commencé. ", "")}
+                </p>
+                <p className="text-blue-600 text-sm mt-4">
+                  Veuillez patienter jusqu'à la date de début pour accéder à l'examen.
+                </p>
+              </div>
+            </div>
+          </main>
+        </div>
+      </div>
+    );
+  }
+  
+  if (error && errorType === 'null_identifier') {
+    return (
+      <div className="flex min-h-screen bg-gray-50">
+        <Aside pages={pages} />
+        <div className="flex flex-col flex-1">
+          <Header />
+          <main className="flex-1 max-w-6xl mx-auto px-6 py-10 w-full">
+            <div className="bg-yellow-50 border-2 border-yellow-300 rounded-xl p-8 shadow-lg max-w-2xl mx-auto mt-20">
+              <div className="text-center">
+                <div className="mb-4">
+                  <svg className="w-20 h-20 mx-auto text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                </div>
+                <h2 className="text-2xl font-bold text-yellow-900 mb-3">
+                  Erreur technique
+                </h2>
+                <p className="text-yellow-700 text-lg mb-6">
+                  {error}
+                </p>
+                <button
+                  onClick={() => window.location.reload()}
+                  className="bg-yellow-500 hover:bg-yellow-600 text-white font-semibold py-3 px-8 rounded-lg shadow-md transition-colors duration-200 flex items-center gap-2 mx-auto"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                  Actualiser la page
+                </button>
+              </div>
+            </div>
+          </main>
+        </div>
+      </div>
+    );
+  }
+  
+  if (error && !errorType) {
+    return (
+      <div className="flex min-h-screen bg-gray-50">
+        <Aside pages={pages} />
+        <div className="flex flex-col flex-1">
+          <Header />
+          <main className="flex-1 max-w-6xl mx-auto px-6 py-10 w-full">
+            <p className="p-6 text-red-600 bg-red-50 border border-red-200 rounded-lg">{error}</p>
+          </main>
+        </div>
+      </div>
+    );
+  }
+  
   if (!exam) return null;
 
   return (
@@ -613,9 +804,9 @@ export default function ExamenDetailsEtudiant({ pages }) {
                   tempsRestant <= 300 ? "bg-yellow-100 text-yellow-800" :
                   "bg-blue-100 text-blue-800"
                 }`}>
-                  <span>
-                    {Math.floor(tempsRestant / 60)}:{(tempsRestant % 60).toString().padStart(2, '0')}
-                  </span>
+                    <span>
+                      {Math.floor(tempsRestant / 60)}:{(tempsRestant % 60).toString().padStart(2, '0')}
+                    </span>
                 </div>
               )}
             </div>
@@ -780,9 +971,21 @@ export default function ExamenDetailsEtudiant({ pages }) {
               {saveMsg && <span className="text-sm text-gray-600">{saveMsg}</span>}
               {submitMsg && <span className="text-sm text-green-700">{submitMsg}</span>}
               {tempsEcoule && (
-                <span className="text-sm text-red-600 font-semibold">
-                  ⚠️ Le temps est écoulé. Vos réponses seront soumises automatiquement.
-                </span>
+                <div className="bg-orange-50 border-2 border-orange-300 rounded-lg p-4 shadow-md animate-pulse">
+                  <div className="flex items-center gap-3">
+                    <svg className="w-6 h-6 text-orange-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                    <div>
+                      <p className="text-orange-800 font-bold text-base">
+                        ⚠️ Le temps est écoulé
+                      </p>
+                      <p className="text-orange-700 text-sm mt-1">
+                        Vos réponses seront soumises automatiquement.
+                      </p>
+                    </div>
+                  </div>
+                </div>
               )}
             </div>
           )}

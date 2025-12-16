@@ -1,120 +1,133 @@
-import { FileText, Clock, AlertCircle, CheckCircle } from "lucide-react";
-import { useEffect } from "react";
-import { useDispatch } from "react-redux";
+import React, { useEffect } from "react";
 import Aside from "../../../components/Layouts/Aside";
 import Header from "../../../components/Layouts/Header";
-import { useSelector } from "react-redux";
+import { FileText, Clock, Calendar } from "lucide-react";
+import { useSelector, useDispatch } from "react-redux";
 import { Link } from "react-router-dom";
 import { fetchExamensByClasse } from "../../../store/slices/examSlice";
 
-export default function Examens({ pages }) {
+export default function ExamensEtudiant({ pages }) {
   const dispatch = useDispatch();
-  const { list: examens, loading, error } = useSelector((state) => state.examens);
+  const { list: examens } = useSelector((state) => state.examens);
   const user = useSelector((state) => state.auth.user);
 
-  const historique = [1, 2, 3, 4, 5, 6];
-
-  // Rafraîchissement automatique pour détecter les examens qui deviennent disponibles
   useEffect(() => {
-    if (!user?.classeId) return;
-
-    // Charger immédiatement
-    dispatch(fetchExamensByClasse(user.classeId));
-
-    // Vérifier toutes les 10 secondes si de nouveaux examens sont disponibles
-    const interval = setInterval(() => {
+    if (user?.classeId) {
       dispatch(fetchExamensByClasse(user.classeId));
-    }, 10000); // Toutes les 10 secondes
-
-    return () => clearInterval(interval);
+      // Rafraîchir automatiquement toutes les 10 secondes pour voir les nouveaux examens
+      const interval = setInterval(() => {
+        dispatch(fetchExamensByClasse(user.classeId));
+      }, 10000);
+      return () => clearInterval(interval);
+    }
   }, [dispatch, user?.classeId]);
+
+  const getStatutBadge = (examen) => {
+    const maintenant = new Date();
+    const dateDebut = examen.dateDebut ? new Date(examen.dateDebut) : null;
+    const dateFin = examen.dateFin ? new Date(examen.dateFin) : null;
+
+    if (dateDebut && maintenant < dateDebut) {
+      return (
+        <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
+          À venir
+        </span>
+      );
+    }
+    if (dateFin && maintenant > dateFin) {
+      return (
+        <span className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-xs font-medium">
+          Terminé
+        </span>
+      );
+    }
+    return (
+      <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">
+        Disponible
+      </span>
+    );
+  };
+
+  const formatDate = (dateString) => {
+    if (!dateString) return "Non spécifiée";
+    const date = new Date(dateString);
+    return date.toLocaleDateString('fr-FR', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
 
   return (
     <div className="flex min-h-screen bg-gray-50">
       <Aside pages={pages} />
-
-      <div className="flex flex-col flex-1">
+      <div className="flex flex-col flex-1 w-full min-h-screen">
         <Header />
-
-        <main className="flex-1 max-w-6xl mx-auto px-6 py-10 w-full">
-          {/* Title */}
+        <main className="flex-1 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
           <div className="mb-8">
-            <h1 className="text-3xl font-bold text-gray-800 flex items-center gap-2">
-              <FileText className="text-green-600" size={28} />
-              Examens de la classe
-            </h1>
+            <h1 className="text-3xl font-bold text-gray-800 mb-2">Mes Examens</h1>
+            <p className="text-gray-600">Consultez et passez vos examens</p>
           </div>
 
-          {/* Error message */}
-          {error && (
-            <div className="flex items-center gap-2 text-red-600 bg-red-50 px-4 py-3 rounded-lg mb-6">
-              <AlertCircle size={18} />
-              <span>{error}</span>
+          {examens.length === 0 ? (
+            <div className="bg-white rounded-xl shadow-sm p-10 text-center">
+              <FileText className="w-16 h-16 mx-auto mb-4 text-gray-400" />
+              <p className="text-lg font-medium text-gray-700">Aucun examen disponible</p>
+              <p className="text-sm text-gray-500 mt-2">
+                Les examens créés par votre professeur apparaîtront ici.
+              </p>
             </div>
-          )}
+          ) : (
+            <div className="space-y-4">
+              {examens.map((exam) => (
+                <Link
+                  to={`/etudiant/exams/${exam.id}`}
+                  key={exam.id}
+                  className="block bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow border border-gray-200"
+                >
+                  <div className="p-6">
+                    <div className="flex justify-between items-start mb-4">
+                      <div className="flex-1">
+                        <h3 className="text-xl font-semibold text-gray-800 mb-2">
+                          {exam.titre}
+                        </h3>
+                        {exam.description && (
+                          <p className="text-gray-600 text-sm mb-3 line-clamp-2">
+                            {exam.description}
+                          </p>
+                        )}
+                      </div>
+                      {getStatutBadge(exam)}
+                    </div>
 
-          {/* Exam list */}
-          <ul className="grid sm:grid-cols-2 lg:grid-cols-2 gap-6">
-            {examens.map((e) => (
-              <li
-                key={e.id}
-                className="border border-green-100 bg-white rounded-2xl shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300 p-6"
-              >
-                <h2 className="text-xl font-semibold text-gray-800 mb-2">{e.titre}</h2>
-                <p className="text-gray-600 mb-4 line-clamp-3">{e.description}</p>
-                <div className="flex items-center gap-2 text-green-600 font-medium">
-                  <Clock size={18} />
-                  <span>Durée : {e.duree} min</span>
-                </div>
-                <div className="mt-4">
-                  <Link
-                    to={`/etudiant/exams/${e.id}`}
-                    className="inline-flex items-center gap-2 text-sm text-blue-600 hover:underline font-medium"
-                  >
-                    Accéder à l'examen
-                  </Link>
-                </div>
-              </li>
-            ))}
-          </ul>
-
-          {/* Historique section */}
-          {/* <section className="mt-12">
-            <h2 className="text-2xl font-semibold text-gray-800 flex items-center gap-2 mb-6">
-              Historique
-            </h2>
-
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {historique.map((item, key) => {
-                const note = key + 8;
-                const isGood = note >= 10;
-                return (
-                  <div
-                    key={key}
-                    className={`bg-white rounded-xl shadow-sm border border-gray-100 p-5 flex items-center justify-between hover:shadow-md hover:-translate-y-1 transition-all duration-300 cursor-pointer ${
-                      isGood ? "border-green-200" : "border-red-200"
-                    }`}
-                  >
-                    <h2 className="text-lg font-medium text-gray-700">
-                      Examen {key + 1}
-                    </h2>
-                    <div className="flex items-end space-x-1">
-                      <p
-                        className={`text-2xl font-semibold ${
-                          isGood ? "text-green-500" : "text-red-500"
-                        }`}
-                      >
-                        {note}
-                      </p>
-                      <p className="text-gray-500">/20</p>
+                    <div className="flex flex-wrap items-center gap-4 text-sm text-gray-500">
+                      <div className="flex items-center gap-2">
+                        <Clock className="w-4 h-4" />
+                        <span>{exam.duree} minutes</span>
+                      </div>
+                      {exam.dateDebut && (
+                        <div className="flex items-center gap-2">
+                          <Calendar className="w-4 h-4" />
+                          <span>Début: {formatDate(exam.dateDebut)}</span>
+                        </div>
+                      )}
+                      {exam.dateFin && (
+                        <div className="flex items-center gap-2">
+                          <Calendar className="w-4 h-4" />
+                          <span>Fin: {formatDate(exam.dateFin)}</span>
+                        </div>
+                      )}
                     </div>
                   </div>
-                );
-              })}
+                </Link>
+              ))}
             </div>
-          </section> */}
+          )}
         </main>
       </div>
     </div>
   );
 }
+

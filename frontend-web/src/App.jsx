@@ -9,7 +9,6 @@ import Dashboard from "./components/Pages/Dashboard";
 // 🧩 Pages Étudiant
 import ExamensEtudiant from "./pages/etudiant/Examen/Examens";
 import ExamenDetailsEtudiant from "./pages/etudiant/Examen/ExamenDetails";
-import ExercicesEtudiant from "./pages/etudiant/Exercices/Exercices";
 
 // 🧩 Pages Professeur
 import ProfExamens from "./pages/professeur/Examens/Examens";
@@ -124,7 +123,6 @@ function App() {
             <Route index element={<ExamensEtudiant pages={etudiantPages} />} />
             <Route path=":id" element={<ExamenDetailsEtudiant pages={etudiantPages} />} />
           </Route>
-          <Route path="/etudiant/exercices" element={<ExercicesEtudiant pages={etudiantPages} />} />
         </Route>
 
         <Route element={<ProtectedRoute allowedRoles={["PROFESSEUR"]} />}>

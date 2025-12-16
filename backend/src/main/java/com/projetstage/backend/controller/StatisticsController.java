@@ -2,9 +2,11 @@ package com.projetstage.backend.controller;
 
 import com.projetstage.backend.model.Examen;
 import com.projetstage.backend.model.SoumissionExamen;
+import com.projetstage.backend.model.Classe;
 import com.projetstage.backend.repository.ExamenRepository;
 import com.projetstage.backend.repository.SoumissionExamenRepository;
 import com.projetstage.backend.repository.ReponseRepository;
+import com.projetstage.backend.repository.ClasseRepository;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -20,13 +22,16 @@ public class StatisticsController {
     private final ExamenRepository examenRepository;
     private final SoumissionExamenRepository soumissionExamenRepository;
     private final ReponseRepository reponseRepository;
+    private final ClasseRepository classeRepository;
 
     public StatisticsController(ExamenRepository examenRepository,
                                 SoumissionExamenRepository soumissionExamenRepository,
-                                ReponseRepository reponseRepository) {
+                                ReponseRepository reponseRepository,
+                                ClasseRepository classeRepository) {
         this.examenRepository = examenRepository;
         this.soumissionExamenRepository = soumissionExamenRepository;
         this.reponseRepository = reponseRepository;
+        this.classeRepository = classeRepository;
     }
 
     // Statistiques pour un examen spécifique
@@ -168,19 +173,28 @@ public class StatisticsController {
 
     // Statistiques globales pour un professeur
     @GetMapping("/professeurs/{professeurId}")
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
     public Map<String, Object> getProfessorStatistics(@PathVariable Long professeurId) {
-        List<Examen> examens = examenRepository.findAll().stream()
-                .filter(e -> e.getProfesseur().getId().equals(professeurId))
+        // Récupérer les IDs des examens du professeur
+        List<Long> examenIds = examenRepository.findAll().stream()
+                .filter(e -> e.getProfesseur() != null && e.getProfesseur().getId().equals(professeurId))
+                .map(Examen::getId)
                 .collect(Collectors.toList());
 
         Map<String, Object> stats = new HashMap<>();
-        stats.put("nombreExamens", examens.size());
+        stats.put("nombreExamens", examenIds.size());
         
         int totalSoumissions = 0;
         double moyenneGlobale = 0.0;
         int nombreExamensAvecSoumissions = 0;
 
-        for (Examen examen : examens) {
+        // Charger les examens avec leurs questions
+        List<Examen> examensAvecQuestions = new ArrayList<>();
+        for (Long examId : examenIds) {
+            examenRepository.findByIdWithQuestions(examId).ifPresent(examensAvecQuestions::add);
+        }
+
+        for (Examen examen : examensAvecQuestions) {
             List<SoumissionExamen> soumissions = soumissionExamenRepository.findByExamenIdWithRelations(examen.getId())
                     .stream()
                     .filter(s -> s.getStatut() == SoumissionExamen.Statut.PUBLIE)
@@ -204,6 +218,219 @@ public class StatisticsController {
         stats.put("totalSoumissions", totalSoumissions);
         stats.put("moyenneGlobale", Math.round(moyenneGlobale * 100.0) / 100.0);
         stats.put("nombreExamensAvecSoumissions", nombreExamensAvecSoumissions);
+
+        // Statistiques par examen (pour graphiques)
+        List<Map<String, Object>> statsParExamen = new ArrayList<>();
+        for (Examen examen : examensAvecQuestions) {
+            List<SoumissionExamen> soumissions = soumissionExamenRepository.findByExamenIdWithRelations(examen.getId())
+                    .stream()
+                    .filter(s -> s.getStatut() == SoumissionExamen.Statut.PUBLIE)
+                    .collect(Collectors.toList());
+            
+            if (!soumissions.isEmpty()) {
+                Map<String, Object> examStats = new HashMap<>();
+                examStats.put("examenId", examen.getId());
+                examStats.put("examenTitre", examen.getTitre());
+                examStats.put("nombreSoumissions", soumissions.size());
+                
+                // Les questions sont déjà chargées grâce à findByIdWithQuestions
+                double totalPoints = examen.getQuestions().stream()
+                        .mapToDouble(q -> q.getBareme() != null ? q.getBareme() : 0.0)
+                        .sum();
+                
+                double moyenneExamen = soumissions.stream()
+                        .mapToDouble(s -> s.getScoreTotal() != null ? s.getScoreTotal() : 0.0)
+                        .average()
+                        .orElse(0.0);
+                
+                examStats.put("moyenne", Math.round(moyenneExamen * 100.0) / 100.0);
+                examStats.put("totalPoints", totalPoints);
+                statsParExamen.add(examStats);
+            }
+        }
+        stats.put("statsParExamen", statsParExamen);
+
+        // Distribution des notes globales
+        Map<String, Long> distributionGlobale = new HashMap<>();
+        distributionGlobale.put("0-10%", 0L);
+        distributionGlobale.put("10-20%", 0L);
+        distributionGlobale.put("20-30%", 0L);
+        distributionGlobale.put("30-40%", 0L);
+        distributionGlobale.put("40-50%", 0L);
+        distributionGlobale.put("50-60%", 0L);
+        distributionGlobale.put("60-70%", 0L);
+        distributionGlobale.put("70-80%", 0L);
+        distributionGlobale.put("80-90%", 0L);
+        distributionGlobale.put("90-100%", 0L);
+
+        for (Examen examen : examensAvecQuestions) {
+            List<SoumissionExamen> soumissions = soumissionExamenRepository.findByExamenIdWithRelations(examen.getId())
+                    .stream()
+                    .filter(s -> s.getStatut() == SoumissionExamen.Statut.PUBLIE)
+                    .collect(Collectors.toList());
+            
+            // Les questions sont déjà chargées
+            double totalPoints = examen.getQuestions().stream()
+                    .mapToDouble(q -> q.getBareme() != null ? q.getBareme() : 0.0)
+                    .sum();
+            
+            for (SoumissionExamen s : soumissions) {
+                double score = s.getScoreTotal() != null ? s.getScoreTotal() : 0.0;
+                double pourcentage = totalPoints > 0 ? (score / totalPoints) * 100 : 0;
+                
+                if (pourcentage < 10) distributionGlobale.put("0-10%", distributionGlobale.get("0-10%") + 1);
+                else if (pourcentage < 20) distributionGlobale.put("10-20%", distributionGlobale.get("10-20%") + 1);
+                else if (pourcentage < 30) distributionGlobale.put("20-30%", distributionGlobale.get("20-30%") + 1);
+                else if (pourcentage < 40) distributionGlobale.put("30-40%", distributionGlobale.get("30-40%") + 1);
+                else if (pourcentage < 50) distributionGlobale.put("40-50%", distributionGlobale.get("40-50%") + 1);
+                else if (pourcentage < 60) distributionGlobale.put("50-60%", distributionGlobale.get("50-60%") + 1);
+                else if (pourcentage < 70) distributionGlobale.put("60-70%", distributionGlobale.get("60-70%") + 1);
+                else if (pourcentage < 80) distributionGlobale.put("70-80%", distributionGlobale.get("70-80%") + 1);
+                else if (pourcentage < 90) distributionGlobale.put("80-90%", distributionGlobale.get("80-90%") + 1);
+                else distributionGlobale.put("90-100%", distributionGlobale.get("90-100%") + 1);
+            }
+        }
+        stats.put("distributionGlobale", distributionGlobale);
+
+        // Statistiques par classe
+        List<Map<String, Object>> statsParClasse = new ArrayList<>();
+        List<Classe> classes = classeRepository.findAllByProfesseurId(professeurId);
+        
+        for (Classe classe : classes) {
+            // Récupérer tous les examens de cette classe créés par ce professeur
+            // Utiliser les examens déjà chargés avec leurs questions
+            List<Examen> examensClasse = new ArrayList<>();
+            for (Examen examen : examensAvecQuestions) {
+                // Charger la classe si nécessaire (elle est en LAZY)
+                if (examen.getClasse() != null && examen.getClasse().getId().equals(classe.getId())) {
+                    examensClasse.add(examen);
+                } else {
+                    // Si la classe n'est pas chargée, vérifier via l'ID de classe de l'examen
+                    // On peut aussi utiliser une requête pour charger les examens avec leur classe
+                    try {
+                        Examen examWithClasse = examenRepository.findById(examen.getId()).orElse(null);
+                        if (examWithClasse != null && examWithClasse.getClasse() != null && 
+                            examWithClasse.getClasse().getId().equals(classe.getId())) {
+                            examensClasse.add(examen);
+                        }
+                    } catch (Exception e) {
+                        // Ignorer les erreurs de lazy loading
+                    }
+                }
+            }
+            
+            // Alternative : utiliser findByClasseId du repository
+            List<Examen> examensParClasse = examenRepository.findByClasseId(classe.getId());
+            examensClasse = examensParClasse.stream()
+                    .filter(e -> e.getProfesseur() != null && e.getProfesseur().getId().equals(professeurId))
+                    .collect(Collectors.toList());
+            
+            int nombreSoumissions = 0;
+            double sommeScores = 0.0;
+            int nombreSoumissionsAvecScore = 0;
+            
+            for (Examen examen : examensClasse) {
+                List<SoumissionExamen> soumissions = soumissionExamenRepository.findByExamenIdWithRelations(examen.getId())
+                        .stream()
+                        .filter(s -> s.getStatut() == SoumissionExamen.Statut.PUBLIE)
+                        .collect(Collectors.toList());
+                
+                nombreSoumissions += soumissions.size();
+                
+                for (SoumissionExamen s : soumissions) {
+                    if (s.getScoreTotal() != null) {
+                        sommeScores += s.getScoreTotal();
+                        nombreSoumissionsAvecScore++;
+                    }
+                }
+            }
+            
+            double moyenneClasse = nombreSoumissionsAvecScore > 0 ? sommeScores / nombreSoumissionsAvecScore : 0.0;
+            
+            Map<String, Object> classeStats = new HashMap<>();
+            classeStats.put("classeId", classe.getId());
+            classeStats.put("classeNom", classe.getNom());
+            classeStats.put("nombreSoumissions", nombreSoumissions);
+            classeStats.put("moyenne", Math.round(moyenneClasse * 100.0) / 100.0);
+            
+            statsParClasse.add(classeStats);
+        }
+        stats.put("statsParClasse", statsParClasse);
+
+        return stats;
+    }
+
+    // Statistiques pour un étudiant
+    @GetMapping("/etudiants/{etudiantId}")
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    public Map<String, Object> getStudentStatistics(@PathVariable Long etudiantId) {
+        // Récupérer toutes les soumissions de l'étudiant avec relations
+        List<SoumissionExamen> allSoumissions = soumissionExamenRepository.findAll();
+        List<SoumissionExamen> soumissions = allSoumissions.stream()
+                .filter(s -> s.getEtudiant() != null && s.getEtudiant().getId().equals(etudiantId))
+                .filter(s -> s.getStatut() == SoumissionExamen.Statut.PUBLIE)
+                .collect(Collectors.toList());
+
+        Map<String, Object> stats = new HashMap<>();
+        stats.put("nombreExamensPasses", soumissions.size());
+        
+        if (soumissions.isEmpty()) {
+            stats.put("moyenneGlobale", 0.0);
+            stats.put("scoreTotal", 0.0);
+            stats.put("meilleurScore", 0.0);
+            stats.put("statsParExamen", new ArrayList<>());
+            return stats;
+        }
+
+        // Calculer les statistiques globales
+        double moyenneGlobale = soumissions.stream()
+                .mapToDouble(s -> s.getScoreTotal() != null ? s.getScoreTotal() : 0.0)
+                .average()
+                .orElse(0.0);
+        
+        double meilleurScore = soumissions.stream()
+                .mapToDouble(s -> s.getScoreTotal() != null ? s.getScoreTotal() : 0.0)
+                .max()
+                .orElse(0.0);
+        
+        double scoreTotal = soumissions.stream()
+                .mapToDouble(s -> s.getScoreTotal() != null ? s.getScoreTotal() : 0.0)
+                .sum();
+
+        stats.put("moyenneGlobale", Math.round(moyenneGlobale * 100.0) / 100.0);
+        stats.put("meilleurScore", meilleurScore);
+        stats.put("scoreTotal", Math.round(scoreTotal * 100.0) / 100.0);
+
+        // Statistiques par examen - charger les examens avec leurs questions
+        List<Map<String, Object>> statsParExamen = new ArrayList<>();
+        for (SoumissionExamen soumission : soumissions) {
+            Examen examen = soumission.getExamen();
+            if (examen != null) {
+                // Charger l'examen avec ses questions pour éviter LazyInitializationException
+                Optional<Examen> examenAvecQuestions = examenRepository.findByIdWithQuestions(examen.getId());
+                if (examenAvecQuestions.isPresent()) {
+                    Examen exam = examenAvecQuestions.get();
+                    
+                    Map<String, Object> examStats = new HashMap<>();
+                    examStats.put("examenId", exam.getId());
+                    examStats.put("examenTitre", exam.getTitre());
+                    examStats.put("score", soumission.getScoreTotal() != null ? soumission.getScoreTotal() : 0.0);
+                    
+                    // Les questions sont maintenant chargées
+                    double totalPoints = exam.getQuestions().stream()
+                            .mapToDouble(q -> q.getBareme() != null ? q.getBareme() : 0.0)
+                            .sum();
+                    
+                    double pourcentage = totalPoints > 0 ? ((soumission.getScoreTotal() != null ? soumission.getScoreTotal() : 0.0) / totalPoints) * 100 : 0;
+                    examStats.put("pourcentage", Math.round(pourcentage * 100.0) / 100.0);
+                    examStats.put("totalPoints", totalPoints);
+                    examStats.put("dateSoumission", soumission.getSubmittedAt());
+                    
+                    statsParExamen.add(examStats);
+                }
+            }
+        }
+        stats.put("statsParExamen", statsParExamen);
 
         return stats;
     }

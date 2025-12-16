@@ -15,6 +15,10 @@ public interface ClasseRepository extends JpaRepository<Classe, Long> {
     @Query("SELECT c FROM Classe c WHERE c.id = :id")
     Optional<Classe> findByIdWithEtudiantsAndProfesseurs(@Param("id") Long id);
 
+    @EntityGraph(attributePaths = {"etudiants"})
+    @Query("SELECT c FROM Classe c WHERE c.id = :id")
+    Optional<Classe> findByIdWithEtudiants(@Param("id") Long id);
+
     @Query("SELECT c FROM Classe c JOIN c.professeurs p WHERE p.id = :profId")
     List<Classe> findAllByProfesseurId(@Param("profId") Long profId);
 }
