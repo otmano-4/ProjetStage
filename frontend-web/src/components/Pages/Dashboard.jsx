@@ -7,6 +7,7 @@ import ScoreDistributionChart from "../Charts/ScoreDistributionChart";
 import PerformanceChart from "../Charts/PerformanceChart";
 import PieChartComponent from "../Charts/PieChartComponent";
 import ClasseStatsChart from "../Charts/ClasseStatsChart";
+import AdminStatsChart from "../Charts/AdminStatsChart";
 
 export default function Dashboard({ pages }) {
   const user = useSelector((state) => state.auth.user);
@@ -30,6 +31,12 @@ export default function Dashboard({ pages }) {
         }
       } else if (user?.role === "ETUDIANT") {
         const res = await fetch(`http://localhost:8080/api/statistics/etudiants/${user.id}`);
+        if (res.ok) {
+          const data = await res.json();
+          setStats(data);
+        }
+      } else if (user?.role === "ADMIN") {
+        const res = await fetch(`http://localhost:8080/api/statistics/admin`);
         if (res.ok) {
           const data = await res.json();
           setStats(data);
@@ -98,8 +105,37 @@ export default function Dashboard({ pages }) {
     ];
   };
 
+  // Stats pour admin
+  const getAdminStats = () => {
+    if (!stats) return [];
+    
+    return [
+      {
+        title: "Total Utilisateurs",
+        value: stats.totalUtilisateurs || 0,
+        icon: <Users className="w-6 h-6 text-blue-600" />,
+      },
+      {
+        title: "Total Classes",
+        value: stats.totalClasses || 0,
+        icon: <BookOpen className="w-6 h-6 text-green-600" />,
+      },
+      {
+        title: "Total Examens",
+        value: stats.totalExamens || 0,
+        icon: <ClipboardList className="w-6 h-6 text-purple-600" />,
+      },
+      {
+        title: "Total Soumissions",
+        value: stats.totalSoumissions || 0,
+        icon: <TrendingUp className="w-6 h-6 text-orange-600" />,
+      },
+    ];
+  };
+
   const displayStats = user?.role === "PROFESSEUR" ? getProfessorStats() : 
-                       user?.role === "ETUDIANT" ? getStudentStats() : [];
+                       user?.role === "ETUDIANT" ? getStudentStats() :
+                       user?.role === "ADMIN" ? getAdminStats() : [];
 
   // Préparer les données pour le graphique en camembert (professeur)
   const getDistributionPieData = () => {
@@ -277,10 +313,56 @@ export default function Dashboard({ pages }) {
                 </div>
               )}
 
-              {/* Dashboard Admin (pas de graphiques pour l'instant) */}
-              {user?.role === "ADMIN" && (
-                <div className="bg-white rounded-xl shadow-sm p-10 text-center">
-                  <p className="text-gray-500">Dashboard administrateur - Fonctionnalités à venir</p>
+              {/* Dashboard Admin */}
+              {user?.role === "ADMIN" && stats && (
+                <div className="space-y-6">
+                  <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 mb-4">
+                    <h4 className="font-semibold text-purple-900 mb-2">💡 Vue d'ensemble du système</h4>
+                    <p className="text-sm text-purple-800">
+                      Les graphiques ci-dessous vous donnent une vue complète de l'activité de la plateforme :
+                      répartition des utilisateurs, statistiques par classe et par professeur.
+                    </p>
+                  </div>
+
+                  {/* Distribution des rôles */}
+                  {stats.distributionRoles && Object.values(stats.distributionRoles).some(v => v > 0) && (
+                    <PieChartComponent 
+                      data={Object.entries(stats.distributionRoles)
+                        .filter(([_, value]) => value > 0)
+                        .map(([name, value]) => ({ name, value: Number(value) }))} 
+                      title="📊 Répartition des utilisateurs par rôle"
+                    />
+                  )}
+
+                  {/* Statistiques par classe */}
+                  {stats.statsParClasse && stats.statsParClasse.length > 0 && (
+                    <AdminStatsChart 
+                      data={stats.statsParClasse} 
+                      title="📚 Statistiques détaillées par classe"
+                      type="classe"
+                    />
+                  )}
+
+                  {/* Statistiques par professeur */}
+                  {stats.statsParProfesseur && stats.statsParProfesseur.length > 0 && (
+                    <AdminStatsChart 
+                      data={stats.statsParProfesseur} 
+                      title="👨‍🏫 Activité des professeurs"
+                      type="professeur"
+                    />
+                  )}
+
+                  {(!stats.distributionRoles || !Object.values(stats.distributionRoles).some(v => v > 0)) && 
+                   (!stats.statsParClasse || stats.statsParClasse.length === 0) && 
+                   (!stats.statsParProfesseur || stats.statsParProfesseur.length === 0) && (
+                    <div className="bg-white rounded-xl shadow-sm p-10 text-center">
+                      <ClipboardList className="w-16 h-16 mx-auto mb-4 text-gray-400" />
+                      <p className="text-lg font-medium text-gray-700">Aucune donnée disponible</p>
+                      <p className="text-sm text-gray-500 mt-2">
+                        Les graphiques apparaîtront ici une fois que des données seront disponibles dans le système.
+                      </p>
+                    </div>
+                  )}
                 </div>
               )}
             </>

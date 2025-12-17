@@ -3,10 +3,12 @@ package com.projetstage.backend.controller;
 import com.projetstage.backend.model.Examen;
 import com.projetstage.backend.model.SoumissionExamen;
 import com.projetstage.backend.model.Classe;
+import com.projetstage.backend.model.Utilisateur;
 import com.projetstage.backend.repository.ExamenRepository;
 import com.projetstage.backend.repository.SoumissionExamenRepository;
 import com.projetstage.backend.repository.ReponseRepository;
 import com.projetstage.backend.repository.ClasseRepository;
+import com.projetstage.backend.repository.UtilisateurRepository;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -23,15 +25,18 @@ public class StatisticsController {
     private final SoumissionExamenRepository soumissionExamenRepository;
     private final ReponseRepository reponseRepository;
     private final ClasseRepository classeRepository;
+    private final UtilisateurRepository utilisateurRepository;
 
     public StatisticsController(ExamenRepository examenRepository,
                                 SoumissionExamenRepository soumissionExamenRepository,
                                 ReponseRepository reponseRepository,
-                                ClasseRepository classeRepository) {
+                                ClasseRepository classeRepository,
+                                UtilisateurRepository utilisateurRepository) {
         this.examenRepository = examenRepository;
         this.soumissionExamenRepository = soumissionExamenRepository;
         this.reponseRepository = reponseRepository;
         this.classeRepository = classeRepository;
+        this.utilisateurRepository = utilisateurRepository;
     }
 
     // Statistiques pour un examen spécifique
@@ -432,6 +437,124 @@ public class StatisticsController {
         }
         stats.put("statsParExamen", statsParExamen);
 
+        return stats;
+    }
+
+    // Statistiques globales pour l'admin
+    @GetMapping("/admin")
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    public Map<String, Object> getAdminStatistics() {
+        Map<String, Object> stats = new HashMap<>();
+        
+        // Statistiques globales
+        long totalUtilisateurs = utilisateurRepository.count();
+        long totalEtudiants = utilisateurRepository.findAll().stream()
+                .filter(u -> u.getRole() == Utilisateur.Role.ETUDIANT)
+                .count();
+        long totalProfesseurs = utilisateurRepository.findAll().stream()
+                .filter(u -> u.getRole() == Utilisateur.Role.PROFESSEUR)
+                .count();
+        long totalAdmins = utilisateurRepository.findAll().stream()
+                .filter(u -> u.getRole() == Utilisateur.Role.ADMIN)
+                .count();
+        
+        long totalClasses = classeRepository.count();
+        long totalExamens = examenRepository.count();
+        long totalSoumissions = soumissionExamenRepository.count();
+        
+        stats.put("totalUtilisateurs", totalUtilisateurs);
+        stats.put("totalEtudiants", totalEtudiants);
+        stats.put("totalProfesseurs", totalProfesseurs);
+        stats.put("totalAdmins", totalAdmins);
+        stats.put("totalClasses", totalClasses);
+        stats.put("totalExamens", totalExamens);
+        stats.put("totalSoumissions", totalSoumissions);
+        
+        // Distribution des rôles (pour graphique camembert)
+        Map<String, Long> distributionRoles = new HashMap<>();
+        distributionRoles.put("Étudiants", totalEtudiants);
+        distributionRoles.put("Professeurs", totalProfesseurs);
+        distributionRoles.put("Admins", totalAdmins);
+        stats.put("distributionRoles", distributionRoles);
+        
+        // Statistiques par classe
+        List<Map<String, Object>> statsParClasse = new ArrayList<>();
+        List<Classe> toutesClasses = classeRepository.findAll();
+        
+        for (Classe classe : toutesClasses) {
+            // Charger la classe avec ses étudiants pour éviter lazy loading
+            Optional<Classe> classeAvecEtudiants = classeRepository.findByIdWithEtudiants(classe.getId());
+            long nombreEtudiants = 0;
+            if (classeAvecEtudiants.isPresent()) {
+                nombreEtudiants = classeAvecEtudiants.get().getEtudiants() != null ? 
+                    classeAvecEtudiants.get().getEtudiants().size() : 0;
+            }
+            
+            List<Examen> examensClasse = examenRepository.findByClasseId(classe.getId());
+            
+            int nombreSoumissions = 0;
+            double sommeScores = 0.0;
+            int nombreSoumissionsAvecScore = 0;
+            
+            for (Examen examen : examensClasse) {
+                List<SoumissionExamen> soumissions = soumissionExamenRepository.findByExamenIdWithRelations(examen.getId())
+                        .stream()
+                        .filter(s -> s.getStatut() == SoumissionExamen.Statut.PUBLIE)
+                        .collect(Collectors.toList());
+                
+                nombreSoumissions += soumissions.size();
+                
+                for (SoumissionExamen s : soumissions) {
+                    if (s.getScoreTotal() != null) {
+                        sommeScores += s.getScoreTotal();
+                        nombreSoumissionsAvecScore++;
+                    }
+                }
+            }
+            
+            double moyenneClasse = nombreSoumissionsAvecScore > 0 ? sommeScores / nombreSoumissionsAvecScore : 0.0;
+            
+            Map<String, Object> classeStats = new HashMap<>();
+            classeStats.put("classeId", classe.getId());
+            classeStats.put("classeNom", classe.getNom());
+            classeStats.put("nombreEtudiants", nombreEtudiants);
+            classeStats.put("nombreExamens", examensClasse.size());
+            classeStats.put("nombreSoumissions", nombreSoumissions);
+            classeStats.put("moyenne", Math.round(moyenneClasse * 100.0) / 100.0);
+            
+            statsParClasse.add(classeStats);
+        }
+        stats.put("statsParClasse", statsParClasse);
+        
+        // Statistiques par professeur
+        List<Map<String, Object>> statsParProfesseur = new ArrayList<>();
+        List<Utilisateur> professeurs = utilisateurRepository.findAll().stream()
+                .filter(u -> u.getRole() == Utilisateur.Role.PROFESSEUR)
+                .collect(Collectors.toList());
+        
+        for (Utilisateur professeur : professeurs) {
+            List<Examen> examensProf = examenRepository.findAll().stream()
+                    .filter(e -> e.getProfesseur() != null && e.getProfesseur().getId().equals(professeur.getId()))
+                    .collect(Collectors.toList());
+            
+            int nombreSoumissions = 0;
+            for (Examen examen : examensProf) {
+                nombreSoumissions += soumissionExamenRepository.findByExamenIdWithRelations(examen.getId())
+                        .stream()
+                        .filter(s -> s.getStatut() == SoumissionExamen.Statut.PUBLIE)
+                        .count();
+            }
+            
+            Map<String, Object> profStats = new HashMap<>();
+            profStats.put("professeurId", professeur.getId());
+            profStats.put("professeurNom", professeur.getNom());
+            profStats.put("nombreExamens", examensProf.size());
+            profStats.put("nombreSoumissions", nombreSoumissions);
+            
+            statsParProfesseur.add(profStats);
+        }
+        stats.put("statsParProfesseur", statsParProfesseur);
+        
         return stats;
     }
 }
